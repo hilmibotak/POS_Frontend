@@ -18,11 +18,13 @@ function Login() {
     setError('')
 
     try {
-      const user = await login(email, password)
+      // Login melalui AuthContext
+      await login(email, password)
 
-      console.log('LOGIN BERHASIL:', user)
-
-      navigate('/dashboard')
+      // Ganti halaman login di browser history
+      navigate('/dashboard', {
+        replace: true,
+      })
     } catch (error) {
       console.error('Login error:', error)
 
@@ -41,6 +43,7 @@ function Login() {
       <div className="w-full max-w-md">
 
         <div className="text-center mb-8">
+
           <h1 className="text-3xl font-bold text-slate-900">
             BuildPOS
           </h1>
@@ -48,6 +51,7 @@ function Login() {
           <p className="mt-2 text-slate-500">
             Sistem Point of Sale Toko Material
           </p>
+
         </div>
 
         <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-8">
@@ -66,9 +70,15 @@ function Login() {
             </div>
           )}
 
-          <form onSubmit={handleLogin} className="mt-6 space-y-5">
+          <form
+            onSubmit={handleLogin}
+            className="mt-6 space-y-5"
+          >
+
+            {/* Email */}
 
             <div>
+
               <label className="block text-sm font-medium text-slate-700 mb-2">
                 Email
               </label>
@@ -76,14 +86,21 @@ function Login() {
               <input
                 type="email"
                 value={email}
-                onChange={(e) => setEmail(e.target.value)}
+                onChange={(e) =>
+                  setEmail(e.target.value)
+                }
                 placeholder="Masukkan email"
                 required
+                autoComplete="email"
                 className="w-full rounded-lg border border-slate-300 px-4 py-3 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
               />
+
             </div>
 
+            {/* Password */}
+
             <div>
+
               <label className="block text-sm font-medium text-slate-700 mb-2">
                 Password
               </label>
@@ -91,19 +108,27 @@ function Login() {
               <input
                 type="password"
                 value={password}
-                onChange={(e) => setPassword(e.target.value)}
+                onChange={(e) =>
+                  setPassword(e.target.value)
+                }
                 placeholder="Masukkan password"
                 required
+                autoComplete="current-password"
                 className="w-full rounded-lg border border-slate-300 px-4 py-3 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
               />
+
             </div>
+
+            {/* Login Button */}
 
             <button
               type="submit"
               disabled={loading}
               className="w-full rounded-lg bg-blue-600 px-4 py-3 font-medium text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60"
             >
-              {loading ? 'Memproses...' : 'Login'}
+              {loading
+                ? 'Memproses...'
+                : 'Login'}
             </button>
 
           </form>
