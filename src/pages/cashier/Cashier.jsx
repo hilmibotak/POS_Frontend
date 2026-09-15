@@ -1,4 +1,14 @@
 import { useEffect, useMemo, useState } from 'react'
+import {
+  Check,
+  Minus,
+  Plus,
+  Search,
+  ShoppingCart,
+  Trash2,
+  X,
+} from 'lucide-react'
+import { useNavigate } from 'react-router-dom'
 import DashboardLayout from '../../components/layout/DashboardLayout'
 import api from '../../services/api'
 
@@ -10,7 +20,32 @@ function formatRupiah(value) {
   }).format(Number(value) || 0)
 }
 
+function getProductDisplayName(product) {
+  if (!product) {
+    return 'Produk'
+  }
+
+  const name = String(product.name || '').trim()
+  const brand = String(product.brand || '').trim()
+
+  if (brand) {
+    return `${name} ${brand}`
+  }
+
+  return name || 'Produk'
+}
+
+function getProductSize(product) {
+  if (!product) {
+    return ''
+  }
+
+  return String(product.size || '').trim()
+}
+
 export default function Cashier() {
+  const navigate = useNavigate()
+
   const [products, setProducts] = useState([])
   const [customers, setCustomers] = useState([])
 
@@ -89,10 +124,14 @@ export default function Cashier() {
 
     return products.filter((product) => {
       const name = String(product.name || '').toLowerCase()
+      const brand = String(product.brand || '').toLowerCase()
+      const size = String(product.size || '').toLowerCase()
       const barcode = String(product.barcode || '').toLowerCase()
 
       return (
         name.includes(keyword) ||
+        brand.includes(keyword) ||
+        size.includes(keyword) ||
         barcode.includes(keyword)
       )
     })
@@ -194,8 +233,8 @@ export default function Cashier() {
     if (selectedUnit) {
       return Number(
         selectedUnit.selling_price ||
-        selectedUnit.price ||
-        0
+          selectedUnit.price ||
+          0
       )
     }
 
@@ -250,8 +289,12 @@ export default function Cashier() {
     const cartItem = {
       product_id: selectedProduct.id,
       product: selectedProduct,
-      unit_id: selectedUnit?.unit_id || selectedProduct.base_unit_id,
-      unit: selectedUnit?.unit || selectedProduct.base_unit,
+      unit_id:
+        selectedUnit?.unit_id ||
+        selectedProduct.base_unit_id,
+      unit:
+        selectedUnit?.unit ||
+        selectedProduct.base_unit,
       unit_name: unitName,
       quantity: qty,
       base_quantity: baseQuantity,
@@ -329,7 +372,7 @@ export default function Cashier() {
         baseQuantity > Number(item.product.stock)
       ) {
         setError(
-          `Stok ${item.product.name} tidak mencukupi.`
+          `Stok ${getProductDisplayName(item.product)} tidak mencukupi.`
         )
 
         return prevCart
@@ -358,99 +401,102 @@ export default function Cashier() {
     setError('')
   }
 
- const handleSubmit = async () => {
-  setError('')
+  const handleSubmit = async () => {
+    setError('')
 
-  if (cart.length === 0) {
-    setError('Keranjang masih kosong.')
-    return
-  }
-
-  if (paidAmount < total) {
-    setError('Jumlah pembayaran masih kurang.')
-    return
-  }
-
-  try {
-    setLoadingTransaction(true)
-
-    const payload = {
-      customer_id: selectedCustomer
-        ? Number(selectedCustomer)
-        : null,
-
-      paid: paidAmount,
-
-      items: cart.map((item) => ({
-        product_id: Number(item.product_id),
-        unit_id: Number(item.unit_id),
-        quantity: Number(item.quantity),
-      })),
+    if (cart.length === 0) {
+      setError('Keranjang masih kosong.')
+      return
     }
 
-    console.log('TRANSACTION PAYLOAD:', payload)
+    if (paidAmount < total) {
+      setError('Jumlah pembayaran masih kurang.')
+      return
+    }
 
-    const response = await api.post(
-      '/transactions',
-      payload
-    )
+    try {
+      setLoadingTransaction(true)
 
-    console.log(
-      'TRANSACTION SUCCESS:',
-      response.data
-    )
+      const payload = {
+        customer_id: selectedCustomer
+          ? Number(selectedCustomer)
+          : null,
 
-    const transaction =
-      response.data?.data ||
-      response.data
+        paid: paidAmount,
 
-    setCart([])
-    setPaid('')
-    setSelectedCustomer('')
-    
-    await fetchProducts()
+        items: cart.map((item) => ({
+          product_id: Number(item.product_id),
+          unit_id: Number(item.unit_id),
+          quantity: Number(item.quantity),
+        })),
+      }
 
-    if (transaction?.id) {
-      navigate(`/transactions/${transaction.id}`)
-    } else {
-      setError(
-        'Transaksi berhasil disimpan, tetapi ID transaksi tidak ditemukan.'
+      console.log(
+        'TRANSACTION PAYLOAD:',
+        payload
       )
-    }
-  } catch (err) {
-    console.error(
-      'TRANSACTION ERROR:',
-      err.response?.data || err
-    )
 
-    if (err.response?.status === 422) {
-      const validationErrors =
-        err.response?.data?.errors
+      const response = await api.post(
+        '/transactions',
+        payload
+      )
 
-      if (validationErrors) {
-        const messages = Object.values(
-          validationErrors
+      console.log(
+        'TRANSACTION SUCCESS:',
+        response.data
+      )
+
+      const transaction =
+        response.data?.data ||
+        response.data
+
+      setCart([])
+      setPaid('')
+      setSelectedCustomer('')
+
+      await fetchProducts()
+
+      if (transaction?.id) {
+        navigate(`/transactions/${transaction.id}`)
+      } else {
+        setError(
+          'Transaksi berhasil disimpan, tetapi ID transaksi tidak ditemukan.'
         )
-          .flat()
-          .join(' ')
+      }
+    } catch (err) {
+      console.error(
+        'TRANSACTION ERROR:',
+        err.response?.data || err
+      )
 
-        setError(messages)
+      if (err.response?.status === 422) {
+        const validationErrors =
+          err.response?.data?.errors
+
+        if (validationErrors) {
+          const messages = Object.values(
+            validationErrors
+          )
+            .flat()
+            .join(' ')
+
+          setError(messages)
+        } else {
+          setError(
+            err.response?.data?.message ||
+              'Data transaksi tidak valid.'
+          )
+        }
       } else {
         setError(
           err.response?.data?.message ||
-            'Data transaksi tidak valid.'
+            'Gagal menyimpan transaksi.'
         )
       }
-    } else {
-      setError(
-        err.response?.data?.message ||
-          'Gagal menyimpan transaksi.'
-      )
+    } finally {
+      setLoadingTransaction(false)
     }
-  } finally {
-    setLoadingTransaction(false)
   }
-}
 
   return (
     <DashboardLayout>
@@ -474,9 +520,11 @@ export default function Cashier() {
             <button
               type="button"
               onClick={() => setError('')}
-              className="font-semibold"
+              title="Tutup pesan"
+              aria-label="Tutup pesan"
+              className="rounded-lg p-1 transition hover:bg-red-100"
             >
-              ×
+              <X size={18} />
             </button>
           </div>
         )}
@@ -529,7 +577,7 @@ export default function Cashier() {
                 </h2>
 
                 <p className="mt-1 text-sm text-gray-500">
-                  Cari barang berdasarkan nama atau barcode.
+                  Cari berdasarkan nama, merek, ukuran, atau barcode.
                 </p>
               </div>
 
@@ -541,13 +589,14 @@ export default function Cashier() {
                   onChange={(e) =>
                     setSearch(e.target.value)
                   }
-                  placeholder="Cari nama barang atau barcode..."
+                  placeholder="Cari nama, merek, ukuran, atau barcode..."
                   className="w-full rounded-xl border border-gray-300 px-4 py-3 pl-11 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
                 />
 
-                <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400">
-                  🔍
-                </span>
+                <Search
+                  size={19}
+                  className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400"
+                />
               </div>
 
               {/* Product list */}
@@ -580,8 +629,14 @@ export default function Cashier() {
                         <div className="flex items-start justify-between gap-3">
                           <div className="min-w-0">
                             <h3 className="truncate font-semibold text-gray-900">
-                              {product.name}
+                              {getProductDisplayName(product)}
                             </h3>
+
+                            {getProductSize(product) ? (
+                              <p className="mt-1 text-sm font-medium text-gray-600">
+                                {getProductSize(product)}
+                              </p>
+                            ) : null}
 
                             <p className="mt-1 text-xs text-gray-500">
                               {product.barcode
@@ -590,7 +645,7 @@ export default function Cashier() {
                             </p>
                           </div>
 
-                          <span className="rounded-lg bg-blue-50 px-2 py-1 text-xs font-semibold text-blue-600">
+                          <span className="shrink-0 rounded-lg bg-blue-50 px-2 py-1 text-xs font-semibold text-blue-600">
                             {getBaseUnitName(product)}
                           </span>
                         </div>
@@ -636,9 +691,11 @@ export default function Cashier() {
                           onClick={() =>
                             openProductModal(product)
                           }
-                          className="mt-4 w-full rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-blue-700"
+                          title={`Tambah ${getProductDisplayName(product)} ke keranjang`}
+                          aria-label={`Tambah ${getProductDisplayName(product)} ke keranjang`}
+                          className="mt-4 flex w-full items-center justify-center rounded-xl bg-blue-600 px-4 py-2.5 text-white transition hover:bg-blue-700"
                         >
-                          + Tambah ke Keranjang
+                          <ShoppingCart size={20} />
                         </button>
                       </div>
                     ))}
@@ -665,9 +722,11 @@ export default function Cashier() {
                   <button
                     type="button"
                     onClick={clearCart}
-                    className="text-xs font-semibold text-red-600 hover:text-red-700"
+                    title="Kosongkan keranjang"
+                    aria-label="Kosongkan keranjang"
+                    className="rounded-lg p-2 text-red-600 transition hover:bg-red-50 hover:text-red-700"
                   >
-                    Kosongkan
+                    <Trash2 size={18} />
                   </button>
                 )}
               </div>
@@ -675,7 +734,10 @@ export default function Cashier() {
               <div className="max-h-[430px] space-y-4 overflow-y-auto p-5">
                 {cart.length === 0 ? (
                   <div className="py-12 text-center">
-                    <div className="text-4xl">🛒</div>
+                    <ShoppingCart
+                      size={42}
+                      className="mx-auto text-gray-300"
+                    />
 
                     <p className="mt-3 font-semibold text-gray-700">
                       Keranjang kosong
@@ -694,8 +756,14 @@ export default function Cashier() {
                       <div className="flex items-start justify-between gap-3">
                         <div className="min-w-0">
                           <h3 className="font-semibold text-gray-900">
-                            {item.product.name}
+                            {getProductDisplayName(item.product)}
                           </h3>
+
+                          {getProductSize(item.product) ? (
+                            <p className="mt-1 text-xs font-medium text-gray-600">
+                              {getProductSize(item.product)}
+                            </p>
+                          ) : null}
 
                           <p className="mt-1 text-xs text-gray-500">
                             {formatRupiah(item.price)} /{' '}
@@ -708,9 +776,11 @@ export default function Cashier() {
                           onClick={() =>
                             removeFromCart(index)
                           }
-                          className="text-lg text-red-500 hover:text-red-700"
+                          title="Hapus barang"
+                          aria-label="Hapus barang"
+                          className="shrink-0 rounded-lg p-1.5 text-red-500 transition hover:bg-red-50 hover:text-red-700"
                         >
-                          ×
+                          <Trash2 size={17} />
                         </button>
                       </div>
 
@@ -724,9 +794,11 @@ export default function Cashier() {
                                 Number(item.quantity) - 1
                               )
                             }
-                            className="px-3 py-1.5 text-gray-600 hover:bg-gray-50"
+                            title="Kurangi jumlah"
+                            aria-label="Kurangi jumlah"
+                            className="rounded-l-lg px-3 py-1.5 text-gray-600 transition hover:bg-gray-50"
                           >
-                            −
+                            <Minus size={16} />
                           </button>
 
                           <input
@@ -751,9 +823,11 @@ export default function Cashier() {
                                 Number(item.quantity) + 1
                               )
                             }
-                            className="px-3 py-1.5 text-gray-600 hover:bg-gray-50"
+                            title="Tambah jumlah"
+                            aria-label="Tambah jumlah"
+                            className="rounded-r-lg px-3 py-1.5 text-gray-600 transition hover:bg-gray-50"
                           >
-                            +
+                            <Plus size={16} />
                           </button>
                         </div>
 
@@ -821,11 +895,25 @@ export default function Cashier() {
                     paidAmount < total
                   }
                   onClick={handleSubmit}
-                  className="mt-5 w-full rounded-xl bg-blue-600 px-4 py-3 font-semibold text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-gray-300"
+                  title={
+                    loadingTransaction
+                      ? 'Menyimpan transaksi...'
+                      : 'Simpan transaksi'
+                  }
+                  aria-label={
+                    loadingTransaction
+                      ? 'Menyimpan transaksi'
+                      : 'Simpan transaksi'
+                  }
+                  className="mt-5 flex w-full items-center justify-center rounded-xl bg-blue-600 px-4 py-3 text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-gray-300"
                 >
-                  {loadingTransaction
-                    ? 'Menyimpan...'
-                    : 'Simpan Transaksi'}
+                  {loadingTransaction ? (
+                    <span className="animate-pulse">
+                      <Check size={21} />
+                    </span>
+                  ) : (
+                    <Check size={21} />
+                  )}
                 </button>
               </div>
             </div>
@@ -838,22 +926,30 @@ export default function Cashier() {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
           <div className="w-full max-w-lg rounded-2xl bg-white shadow-xl">
             <div className="flex items-center justify-between border-b border-gray-200 p-5">
-              <div>
+              <div className="min-w-0">
                 <h2 className="text-lg font-bold text-gray-900">
                   Tambah Barang
                 </h2>
 
-                <p className="mt-1 text-sm text-gray-500">
-                  {selectedProduct.name}
+                <p className="mt-1 font-medium text-gray-700">
+                  {getProductDisplayName(selectedProduct)}
                 </p>
+
+                {getProductSize(selectedProduct) ? (
+                  <p className="mt-0.5 text-sm text-gray-500">
+                    {getProductSize(selectedProduct)}
+                  </p>
+                ) : null}
               </div>
 
               <button
                 type="button"
                 onClick={closeProductModal}
-                className="text-2xl text-gray-400 hover:text-gray-700"
+                title="Tutup"
+                aria-label="Tutup"
+                className="rounded-lg p-2 text-gray-400 transition hover:bg-gray-100 hover:text-gray-700"
               >
-                ×
+                <X size={21} />
               </button>
             </div>
 
@@ -977,8 +1073,7 @@ export default function Cashier() {
               {/* Base quantity info */}
               {selectedUnit && (
                 <div className="text-xs text-gray-500">
-                  {quantity} {getSelectedUnitName()} =
-                  {' '}
+                  {quantity} {getSelectedUnitName()} ={' '}
                   {Number(quantity || 0) *
                     getConversionRate()}{' '}
                   {getBaseUnitName(selectedProduct)}
@@ -989,17 +1084,21 @@ export default function Cashier() {
                 <button
                   type="button"
                   onClick={closeProductModal}
-                  className="flex-1 rounded-xl border border-gray-300 px-4 py-3 text-sm font-semibold text-gray-700 hover:bg-gray-50"
+                  title="Batal"
+                  aria-label="Batal"
+                  className="flex flex-1 items-center justify-center rounded-xl border border-gray-300 px-4 py-3 text-gray-700 transition hover:bg-gray-50"
                 >
-                  Batal
+                  <X size={20} />
                 </button>
 
                 <button
                   type="button"
                   onClick={addToCart}
-                  className="flex-1 rounded-xl bg-blue-600 px-4 py-3 text-sm font-semibold text-white hover:bg-blue-700"
+                  title="Tambahkan ke keranjang"
+                  aria-label="Tambahkan ke keranjang"
+                  className="flex flex-1 items-center justify-center rounded-xl bg-blue-600 px-4 py-3 text-white transition hover:bg-blue-700"
                 >
-                  Tambahkan
+                  <ShoppingCart size={20} />
                 </button>
               </div>
             </div>

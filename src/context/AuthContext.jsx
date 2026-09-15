@@ -9,17 +9,77 @@ import { Navigate } from 'react-router-dom'
 
 import api from '../services/api'
 
+
+// =====================================================
+// AUTH CONTEXT
+// =====================================================
+
 const AuthContext = createContext(null)
+
+
+// =====================================================
+// AUTH PROVIDER
+// =====================================================
 
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null)
   const [loading, setLoading] = useState(true)
 
-  // Cek apakah user masih memiliki session
+
+  // ===================================================
+  // SET TOKEN KE AXIOS
+  // ===================================================
+
+  const setAuthToken = (token) => {
+    if (token) {
+      api.defaults.headers.common[
+        'Authorization'
+      ] = `Bearer ${token}`
+    } else {
+      delete api.defaults.headers.common[
+        'Authorization'
+      ]
+    }
+  }
+
+
+  // ===================================================
+  // CLEAR AUTHENTICATION
+  // ===================================================
+
+  const clearAuthentication = () => {
+    localStorage.removeItem('token')
+
+    setAuthToken(null)
+
+    setUser(null)
+  }
+
+
+  // ===================================================
+  // AMBIL DATA USER DARI RESPONSE
+  // ===================================================
+
+  const extractUser = (response) => {
+    return (
+      response?.data?.data ||
+      response?.data?.user ||
+      response?.data ||
+      null
+    )
+  }
+
+
+  // ===================================================
+  // CHECK AUTHENTICATION
+  // ===================================================
+
   useEffect(() => {
     const checkAuthentication = async () => {
-      const token = localStorage.getItem('token')
+      const token =
+        localStorage.getItem('token')
 
+      // Tidak ada token
       if (!token) {
         setUser(null)
         setLoading(false)
@@ -27,31 +87,32 @@ export function AuthProvider({ children }) {
       }
 
       try {
-        api.defaults.headers.common[
-          'Authorization'
-        ] = `Bearer ${token}`
+        // Pasang token ke Axios
+        setAuthToken(token)
 
-        const response = await api.get('/me')
+        // Ambil user yang sedang login
+        const response =
+          await api.get('/me')
 
         const userData =
-          response.data?.data ||
-          response.data?.user ||
-          response.data
+          extractUser(response)
+
+        if (!userData) {
+          throw new Error(
+            'Data user tidak ditemukan'
+          )
+        }
 
         setUser(userData)
+
       } catch (error) {
         console.error(
           'AUTH CHECK ERROR:',
           error
         )
 
-        localStorage.removeItem('token')
+        clearAuthentication()
 
-        delete api.defaults.headers.common[
-          'Authorization'
-        ]
-
-        setUser(null)
       } finally {
         setLoading(false)
       }
@@ -60,101 +121,325 @@ export function AuthProvider({ children }) {
     checkAuthentication()
   }, [])
 
-  // Login
-  const login = async (email, password) => {
-    const response = await api.post('/login', {
-      email,
-      password,
-    })
 
-    console.log(
-      'LOGIN RESPONSE:',
-      response.data
-    )
+  // ===================================================
+  // LOGIN
+  // ===================================================
 
-    const token =
-      response.data?.token ||
-      response.data?.data?.token ||
-      response.data?.access_token
+  const login = async (
+    email,
+    password
+  ) => {
+    try {
+      const response =
+        await api.post('/login', {
+          email,
+          password,
+        })
 
-    if (!token) {
-      throw new Error(
-        'Token tidak ditemukan dari response login'
+      console.log(
+        'LOGIN RESPONSE:',
+        response.data
       )
+
+      // Ambil token
+      const token =
+        response.data?.token ||
+        response.data?.data?.token ||
+        response.data?.access_token
+
+      if (!token) {
+        throw new Error(
+          'Token tidak ditemukan dari response login'
+        )
+      }
+
+      // Simpan token
+      localStorage.setItem(
+        'token',
+        token
+      )
+
+      // Pasang token
+      setAuthToken(token)
+
+
+      // ===============================================
+      // Ambil data user terbaru
+      // ===============================================
+
+      const meResponse =
+        await api.get('/me')
+
+      console.log(
+        'ME RESPONSE:',
+        meResponse.data
+      )
+
+      const userData =
+        extractUser(meResponse)
+
+      if (!userData) {
+        throw new Error(
+          'Data user tidak ditemukan setelah login'
+        )
+      }
+
+      setUser(userData)
+
+      return userData
+
+    } catch (error) {
+      console.error(
+        'LOGIN ERROR:',
+        error
+      )
+
+      // Kalau login gagal,
+      // bersihkan token
+      clearAuthentication()
+
+      throw error
     }
-
-    // Simpan token
-    localStorage.setItem(
-      'token',
-      token
-    )
-
-    // Pasang token ke Axios
-    api.defaults.headers.common[
-      'Authorization'
-    ] = `Bearer ${token}`
-
-    // Ambil data user
-    const meResponse =
-      await api.get('/me')
-
-    console.log(
-      'ME RESPONSE:',
-      meResponse.data
-    )
-
-    const userData =
-      meResponse.data?.data ||
-      meResponse.data?.user ||
-      meResponse.data
-
-    setUser(userData)
-
-    return userData
   }
 
-  // Logout sementara tetap sederhana
+
+  // ===================================================
+  // REFRESH USER
+  // ===================================================
+  //
+  // Digunakan kalau kita ingin mengambil
+  // data user terbaru dari backend.
+  //
+  // Contoh:
+  // - setelah update profile
+  // - setelah perubahan akun
+  // - setelah halaman dibuka kembali
+  //
+  // ===================================================
+
+  const refreshUser = async () => {
+    const token =
+      localStorage.getItem('token')
+
+    if (!token) {
+      setUser(null)
+      return null
+    }
+
+    try {
+      setAuthToken(token)
+
+      const response =
+        await api.get('/me')
+
+      const userData =
+        extractUser(response)
+
+      if (!userData) {
+        throw new Error(
+          'Data user tidak ditemukan'
+        )
+      }
+
+      setUser(userData)
+
+      return userData
+
+    } catch (error) {
+      console.error(
+        'REFRESH USER ERROR:',
+        error
+      )
+
+      clearAuthentication()
+
+      throw error
+    }
+  }
+
+
+  // ===================================================
+  // UPDATE USER
+  // ===================================================
+  //
+  // Update data user langsung di state React.
+  //
+  // Dipakai setelah API berhasil mengubah profile.
+  //
+  // ===================================================
+
+  const updateUser = (userData) => {
+    if (!userData) {
+      return
+    }
+
+    setUser(userData)
+  }
+
+
+  // ===================================================
+  // UPDATE PROFILE
+  // ===================================================
+  //
+  // API:
+  // PUT /api/profile
+  //
+  // Data:
+  // {
+  //   name,
+  //   email,
+  //   password
+  // }
+  //
+  // ===================================================
+
+  const updateProfile = async (
+    profileData
+  ) => {
+    try {
+      const payload = {
+        name: profileData.name,
+        email: profileData.email,
+      }
+
+
+      // Password hanya dikirim
+      // kalau memang diisi
+      if (
+        profileData.password &&
+        profileData.password.trim() !== ''
+      ) {
+        payload.password =
+          profileData.password
+      }
+
+
+      const response =
+        await api.put(
+          '/profile',
+          payload
+        )
+
+      console.log(
+        'UPDATE PROFILE RESPONSE:',
+        response.data
+      )
+
+
+      const updatedUser =
+        extractUser(response)
+
+      if (updatedUser) {
+        setUser(updatedUser)
+      } else {
+        // Kalau backend tidak mengembalikan
+        // user, ambil ulang dari /me
+        await refreshUser()
+      }
+
+
+      return response.data
+
+    } catch (error) {
+      console.error(
+        'UPDATE PROFILE ERROR:',
+        error
+      )
+
+      throw error
+    }
+  }
+
+
+  // ===================================================
+  // LOGOUT
+  // ===================================================
+
   const logout = async () => {
     try {
-      await api.post('/logout')
+      const token =
+        localStorage.getItem('token')
+
+      if (token) {
+        setAuthToken(token)
+
+        await api.post('/logout')
+      }
+
     } catch (error) {
       console.error(
         'LOGOUT ERROR:',
         error
       )
+
+    } finally {
+      clearAuthentication()
     }
-
-    localStorage.removeItem('token')
-
-    delete api.defaults.headers.common[
-      'Authorization'
-    ]
-
-    setUser(null)
   }
+
+
+  // ===================================================
+  // HELPER ROLE
+  // ===================================================
+
+  const isAdmin =
+    user?.role === 'admin'
+
+  const isKasir =
+    user?.role === 'kasir'
+
+  const isAuthenticated =
+    !!user
+
+
+  // ===================================================
+  // CONTEXT VALUE
+  // ===================================================
+
+  const contextValue = {
+    // User
+    user,
+    updateUser,
+    refreshUser,
+    updateProfile,
+
+    // Authentication
+    loading,
+    isAuthenticated,
+
+    // Role
+    isAdmin,
+    isKasir,
+
+    // Actions
+    login,
+    logout,
+  }
+
 
   return (
     <AuthContext.Provider
-      value={{
-        user,
-        loading,
-        login,
-        logout,
-      }}
+      value={contextValue}
     >
       {children}
     </AuthContext.Provider>
   )
 }
 
+
+// =====================================================
+// USE AUTH
+// =====================================================
+
 export function useAuth() {
   return useContext(AuthContext)
 }
 
 
-// ==============================
+// =====================================================
 // PROTECTED ROUTE
-// ==============================
+// =====================================================
 
 export function ProtectedRoute({
   children,
@@ -164,6 +449,8 @@ export function ProtectedRoute({
     loading,
   } = useAuth()
 
+
+  // Masih mengecek authentication
   if (loading) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-gray-50">
@@ -174,36 +461,6 @@ export function ProtectedRoute({
     )
   }
 
-  if (!user) {
-    return (
-      <Navigate
-        to="/login"
-        replace
-      />
-    )
-  }
-
-  return children
-}
-
-export function RoleRoute({
-  roles,
-  children,
-}) {
-  const {
-    user,
-    loading,
-  } = useAuth()
-
-  if (loading) {
-    return (
-      <div className="flex min-h-screen items-center justify-center bg-gray-50">
-        <div className="text-sm text-gray-500">
-          Memeriksa autentikasi...
-        </div>
-      </div>
-    )
-  }
 
   // Belum login
   if (!user) {
@@ -215,24 +472,17 @@ export function RoleRoute({
     )
   }
 
-  // Role tidak sesuai
-  if (!roles.includes(user.role)) {
-    return (
-      <Navigate
-        to="/dashboard"
-        replace
-      />
-    )
-  }
 
   return children
 }
 
-// ==============================
-// PUBLIC ROUTE
-// ==============================
 
-export function PublicRoute({
+// =====================================================
+// ROLE ROUTE
+// =====================================================
+
+export function RoleRoute({
+  roles,
   children,
 }) {
   const {
@@ -240,6 +490,8 @@ export function PublicRoute({
     loading,
   } = useAuth()
 
+
+  // Masih loading
   if (loading) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-gray-50">
@@ -250,8 +502,59 @@ export function PublicRoute({
     )
   }
 
-  // Kalau sudah login,
-  // tidak boleh kembali ke halaman login
+
+  // Belum login
+  if (!user) {
+    return (
+      <Navigate
+        to="/login"
+        replace
+      />
+    )
+  }
+
+
+  // Role tidak sesuai
+  if (!roles.includes(user.role)) {
+    return (
+      <Navigate
+        to="/dashboard"
+        replace
+      />
+    )
+  }
+
+
+  return children
+}
+
+
+// =====================================================
+// PUBLIC ROUTE
+// =====================================================
+
+export function PublicRoute({
+  children,
+}) {
+  const {
+    user,
+    loading,
+  } = useAuth()
+
+
+  // Masih loading
+  if (loading) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-gray-50">
+        <div className="text-sm text-gray-500">
+          Memeriksa autentikasi...
+        </div>
+      </div>
+    )
+  }
+
+
+  // Sudah login
   if (user) {
     return (
       <Navigate
@@ -260,6 +563,7 @@ export function PublicRoute({
       />
     )
   }
+
 
   return children
 }

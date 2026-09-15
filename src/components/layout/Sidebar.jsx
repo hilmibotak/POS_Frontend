@@ -363,7 +363,20 @@ function Sidebar({ open }) {
               <p className="mb-3 px-3 text-xs font-semibold uppercase tracking-wider text-slate-400">
                 Administrasi
               </p>
-
+              
+               {/* LAPORAN */}
+              <NavLink
+                to="/reports"
+                className={({ isActive }) =>
+                  `flex items-center rounded-lg px-4 py-2.5 text-sm font-medium transition ${
+                    isActive
+                      ? 'bg-blue-50 text-blue-600'
+                      : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'
+                  }`
+                }
+              >
+                Laporan
+              </NavLink>
 
               {/* PEGAWAI */}
 
@@ -450,19 +463,6 @@ function Sidebar({ open }) {
             Profil
           </span>
 
-        </NavLink>
-
-        <NavLink
-            to="/reports"
-            className={({ isActive }) =>
-                `flex items-center rounded-lg px-4 py-2.5 text-sm font-medium transition ${
-                isActive
-                    ? 'bg-blue-50 text-blue-600'
-                    : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'
-                }`
-            }
-            >
-            Laporan
         </NavLink>
 
       </nav>

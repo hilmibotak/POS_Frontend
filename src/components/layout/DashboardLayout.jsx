@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { Bell, Menu } from 'lucide-react'
 import Sidebar from './Sidebar'
 import { useAuth } from '../../context/AuthContext'
 
@@ -26,12 +27,21 @@ function DashboardLayout({
         {/* Header */}
         <header className="sticky top-0 z-30 flex h-20 items-center justify-between border-b border-slate-200 bg-white px-4 sm:px-6 lg:px-8">
           <div className="flex items-center gap-4">
+            {/* Toggle Sidebar */}
             <button
               type="button"
-              onClick={() => setSidebarOpen(!sidebarOpen)}
-              className="rounded-lg p-2 text-slate-500 transition hover:bg-slate-100"
+              title={sidebarOpen ? 'Tutup Sidebar' : 'Buka Sidebar'}
+              aria-label={
+                sidebarOpen
+                  ? 'Tutup Sidebar'
+                  : 'Buka Sidebar'
+              }
+              onClick={() =>
+                setSidebarOpen(!sidebarOpen)
+              }
+              className="inline-flex h-10 w-10 items-center justify-center rounded-lg text-slate-500 transition hover:bg-slate-100 hover:text-slate-700"
             >
-              ☰
+              <Menu className="h-5 w-5" />
             </button>
 
             <div>
@@ -48,15 +58,19 @@ function DashboardLayout({
           </div>
 
           <div className="flex items-center gap-3">
+            {/* Notification */}
             <button
               type="button"
-              className="relative rounded-xl border border-slate-200 p-2.5 text-slate-500 hover:bg-slate-50"
+              title="Notifikasi"
+              aria-label="Notifikasi"
+              className="relative inline-flex h-10 w-10 items-center justify-center rounded-xl border border-slate-200 text-slate-500 transition hover:bg-slate-50 hover:text-slate-700"
             >
-              🔔
+              <Bell className="h-5 w-5" />
 
               <span className="absolute right-1.5 top-1.5 h-2 w-2 rounded-full bg-red-500" />
             </button>
 
+            {/* User */}
             <div className="hidden items-center gap-3 border-l border-slate-200 pl-4 sm:flex">
               <div className="text-right">
                 <p className="text-sm font-semibold text-slate-900">
@@ -71,7 +85,9 @@ function DashboardLayout({
               </div>
 
               <div className="flex h-10 w-10 items-center justify-center rounded-full bg-blue-600 font-semibold text-white">
-                {user?.name?.charAt(0)?.toUpperCase() || 'U'}
+                {user?.name
+                  ?.charAt(0)
+                  ?.toUpperCase() || 'U'}
               </div>
             </div>
           </div>

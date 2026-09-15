@@ -19,6 +19,7 @@ import Stock from './pages/stock/Stock'
 import StockIn from './pages/stock/StockIn'
 import Employees from './pages/employees/Employees'
 import Reports from './pages/reports/Reports'
+import Profile from './pages/profile/Profile'
 
 
 import {
@@ -78,6 +79,22 @@ function App() {
                 roles={['admin', 'kasir']}
               >
                 <Cashier />
+              </RoleRoute>
+            }
+          />
+
+          {/* =========================
+              PROFILE
+              ADMIN + KASIR
+          ========================= */}
+
+          <Route
+            path="/profile"
+            element={
+              <RoleRoute
+                roles={['admin', 'kasir']}
+              >
+                <Profile />
               </RoleRoute>
             }
           />

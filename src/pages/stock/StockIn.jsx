@@ -1,5 +1,10 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import {
+  ArrowLeft,
+  Save,
+  X,
+} from 'lucide-react'
 import DashboardLayout from '../../components/layout/DashboardLayout'
 import api from '../../services/api'
 
@@ -39,7 +44,10 @@ export default function StockIn() {
 
       const response = await api.get('/products')
 
-      console.log('PRODUCTS FOR STOCK IN:', response.data)
+      console.log(
+        'PRODUCTS FOR STOCK IN:',
+        response.data
+      )
 
       const responseData = response.data?.data
 
@@ -49,7 +57,10 @@ export default function StockIn() {
 
       setProducts(data)
     } catch (err) {
-      console.error('FETCH PRODUCTS ERROR:', err)
+      console.error(
+        'FETCH PRODUCTS ERROR:',
+        err
+      )
 
       setError(
         err.response?.data?.message ||
@@ -61,7 +72,8 @@ export default function StockIn() {
   }
 
   const selectedProduct = products.find(
-    (product) => String(product.id) === String(productId)
+    (product) =>
+      String(product.id) === String(productId)
   )
 
   const getUnitName = (product) => {
@@ -81,12 +93,16 @@ export default function StockIn() {
     setSuccess('')
 
     if (!productId) {
-      setError('Silakan pilih barang terlebih dahulu.')
+      setError(
+        'Silakan pilih barang terlebih dahulu.'
+      )
       return
     }
 
     if (!quantity || Number(quantity) <= 0) {
-      setError('Jumlah stok harus lebih dari 0.')
+      setError(
+        'Jumlah stok harus lebih dari 0.'
+      )
       return
     }
 
@@ -99,14 +115,20 @@ export default function StockIn() {
         note: note.trim() || 'Stok masuk',
       }
 
-      console.log('STOCK IN PAYLOAD:', payload)
+      console.log(
+        'STOCK IN PAYLOAD:',
+        payload
+      )
 
       const response = await api.post(
         '/stock-movements/in',
         payload
       )
 
-      console.log('STOCK IN RESPONSE:', response.data)
+      console.log(
+        'STOCK IN RESPONSE:',
+        response.data
+      )
 
       setSuccess(
         response.data?.message ||
@@ -117,21 +139,26 @@ export default function StockIn() {
       setQuantity('')
       setNote('')
 
-      // Tunggu sebentar supaya user melihat pesan berhasil.
+      // Tunggu sebentar supaya user melihat
+      // pesan berhasil.
       setTimeout(() => {
         navigate('/stock')
       }, 800)
     } catch (err) {
-      console.error('STOCK IN ERROR:', err)
+      console.error(
+        'STOCK IN ERROR:',
+        err
+      )
 
       if (err.response?.status === 422) {
         const validationErrors =
           err.response?.data?.errors
 
         if (validationErrors) {
-          const firstError = Object.values(
-            validationErrors
-          )[0]
+          const firstError =
+            Object.values(
+              validationErrors
+            )[0]
 
           setError(
             Array.isArray(firstError)
@@ -159,14 +186,21 @@ export default function StockIn() {
     <DashboardLayout>
       <div className="mx-auto max-w-3xl space-y-6">
 
-        {/* Header */}
+        {/* ==============================
+            HEADER
+        ============================== */}
+
         <div>
           <button
             type="button"
-            onClick={() => navigate('/stock')}
-            className="mb-3 text-sm font-semibold text-blue-600 hover:text-blue-700"
+            title="Kembali ke Stok"
+            aria-label="Kembali ke Stok"
+            onClick={() =>
+              navigate('/stock')
+            }
+            className="mb-3 inline-flex h-10 w-10 items-center justify-center rounded-lg text-blue-600 transition hover:bg-blue-50 hover:text-blue-700"
           >
-            ← Kembali ke Stok
+            <ArrowLeft className="h-5 w-5" />
           </button>
 
           <h1 className="text-2xl font-bold text-gray-900">
@@ -178,29 +212,40 @@ export default function StockIn() {
           </p>
         </div>
 
-        {/* Success */}
+        {/* ==============================
+            SUCCESS
+        ============================== */}
+
         {success && (
           <div className="rounded-lg border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-700">
             {success}
           </div>
         )}
 
-        {/* Error */}
+        {/* ==============================
+            ERROR
+        ============================== */}
+
         {error && (
           <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-600">
             {error}
           </div>
         )}
 
-        {/* Form */}
+        {/* ==============================
+            FORM
+        ============================== */}
+
         <form
           onSubmit={handleSubmit}
           className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm"
         >
-
           <div className="space-y-5">
 
-            {/* Product */}
+            {/* ==========================
+                PRODUCT
+            ========================== */}
+
             <div>
               <label className="mb-2 block text-sm font-semibold text-gray-700">
                 Barang
@@ -209,9 +254,14 @@ export default function StockIn() {
               <select
                 value={productId}
                 onChange={(event) =>
-                  setProductId(event.target.value)
+                  setProductId(
+                    event.target.value
+                  )
                 }
-                disabled={loadingProducts || saving}
+                disabled={
+                  loadingProducts ||
+                  saving
+                }
                 className="w-full rounded-lg border border-gray-300 bg-white px-4 py-3 text-sm outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100 disabled:bg-gray-100"
               >
                 <option value="">
@@ -231,7 +281,10 @@ export default function StockIn() {
               </select>
             </div>
 
-            {/* Current Stock */}
+            {/* ==========================
+                CURRENT STOCK
+            ========================== */}
+
             {selectedProduct && (
               <div className="rounded-lg bg-gray-50 p-4">
                 <p className="text-sm text-gray-500">
@@ -242,14 +295,20 @@ export default function StockIn() {
                   {formatNumber(
                     selectedProduct.stock
                   )}{' '}
+
                   <span className="text-sm font-medium text-gray-500">
-                    {getUnitName(selectedProduct)}
+                    {getUnitName(
+                      selectedProduct
+                    )}
                   </span>
                 </p>
               </div>
             )}
 
-            {/* Quantity */}
+            {/* ==========================
+                QUANTITY
+            ========================== */}
+
             <div>
               <label className="mb-2 block text-sm font-semibold text-gray-700">
                 Jumlah Stok Masuk
@@ -262,7 +321,9 @@ export default function StockIn() {
                   step="0.001"
                   value={quantity}
                   onChange={(event) =>
-                    setQuantity(event.target.value)
+                    setQuantity(
+                      event.target.value
+                    )
                   }
                   disabled={saving}
                   placeholder="Contoh: 50"
@@ -271,7 +332,9 @@ export default function StockIn() {
 
                 {selectedProduct && (
                   <span className="absolute right-4 top-1/2 -translate-y-1/2 text-sm text-gray-500">
-                    {getUnitName(selectedProduct)}
+                    {getUnitName(
+                      selectedProduct
+                    )}
                   </span>
                 )}
               </div>
@@ -281,7 +344,10 @@ export default function StockIn() {
               </p>
             </div>
 
-            {/* Preview */}
+            {/* ==========================
+                PREVIEW
+            ========================== */}
+
             {selectedProduct &&
               quantity &&
               Number(quantity) > 0 && (
@@ -292,17 +358,26 @@ export default function StockIn() {
 
                   <p className="mt-1 text-xl font-bold text-blue-900">
                     {formatNumber(
-                      Number(selectedProduct.stock || 0) +
+                      Number(
+                        selectedProduct.stock ||
+                          0
+                      ) +
                         Number(quantity)
                     )}{' '}
+
                     <span className="text-sm font-medium">
-                      {getUnitName(selectedProduct)}
+                      {getUnitName(
+                        selectedProduct
+                      )}
                     </span>
                   </p>
                 </div>
               )}
 
-            {/* Note */}
+            {/* ==========================
+                NOTE
+            ========================== */}
+
             <div>
               <label className="mb-2 block text-sm font-semibold text-gray-700">
                 Keterangan
@@ -311,7 +386,9 @@ export default function StockIn() {
               <textarea
                 value={note}
                 onChange={(event) =>
-                  setNote(event.target.value)
+                  setNote(
+                    event.target.value
+                  )
                 }
                 disabled={saving}
                 rows="4"
@@ -322,32 +399,58 @@ export default function StockIn() {
 
           </div>
 
-          {/* Buttons */}
+          {/* ==============================
+              BUTTONS
+          ============================== */}
+
           <div className="mt-7 flex justify-end gap-3 border-t border-gray-100 pt-5">
+
+            {/* BATAL */}
 
             <button
               type="button"
-              onClick={() => navigate('/stock')}
+              title="Batal"
+              aria-label="Batal"
+              onClick={() =>
+                navigate('/stock')
+              }
               disabled={saving}
-              className="rounded-lg border border-gray-300 px-5 py-2.5 text-sm font-semibold text-gray-700 transition hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50"
+              className="inline-flex h-10 w-10 items-center justify-center rounded-lg border border-gray-300 text-gray-600 transition hover:bg-gray-50 hover:text-gray-800 disabled:cursor-not-allowed disabled:opacity-50"
             >
-              Batal
+              <X className="h-5 w-5" />
             </button>
+
+            {/* SIMPAN */}
 
             <button
               type="submit"
-              disabled={saving || loadingProducts}
-              className="rounded-lg bg-blue-600 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-gray-300"
+              title={
+                saving
+                  ? 'Menyimpan...'
+                  : 'Simpan Stok'
+              }
+              aria-label={
+                saving
+                  ? 'Menyimpan...'
+                  : 'Simpan Stok'
+              }
+              disabled={
+                saving ||
+                loadingProducts
+              }
+              className="inline-flex h-10 w-10 items-center justify-center rounded-lg bg-blue-600 text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-gray-300"
             >
-              {saving
-                ? 'Menyimpan...'
-                : 'Simpan Stok'}
+              <Save
+                className={`h-5 w-5 ${
+                  saving
+                    ? 'animate-pulse'
+                    : ''
+                }`}
+              />
             </button>
 
           </div>
-
         </form>
-
       </div>
     </DashboardLayout>
   )

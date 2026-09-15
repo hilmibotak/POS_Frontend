@@ -5,10 +5,11 @@ import api from '../../services/api'
 
 function Products() {
   const navigate = useNavigate()
+
   const [products, setProducts] = useState([])
   const [categories, setCategories] = useState([])
   const [units, setUnits] = useState([])
- 
+
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
 
@@ -20,6 +21,8 @@ function Products() {
 
   const [form, setForm] = useState({
     name: '',
+    brand: '',
+    size: '',
     barcode: '',
     category_id: '',
     base_unit_id: '',
@@ -102,8 +105,12 @@ function Products() {
   }
 
   const handleChange = (event) => {
-    const { name, value, type, checked } =
-      event.target
+    const {
+      name,
+      value,
+      type,
+      checked,
+    } = event.target
 
     setForm((prev) => ({
       ...prev,
@@ -117,6 +124,8 @@ function Products() {
   const resetForm = () => {
     setForm({
       name: '',
+      brand: '',
+      size: '',
       barcode: '',
       category_id: '',
       base_unit_id: '',
@@ -143,6 +152,8 @@ function Products() {
 
     setForm({
       name: product.name || '',
+      brand: product.brand || '',
+      size: product.size || '',
       barcode: product.barcode || '',
       category_id:
         product.category_id ||
@@ -182,6 +193,8 @@ function Products() {
 
   const handleSubmit = async (event) => {
     event.preventDefault()
+
+    setError('')
 
     if (!form.name.trim()) {
       setError('Nama barang wajib diisi.')
@@ -232,30 +245,46 @@ function Products() {
 
     try {
       setSaving(true)
-      setError('')
       setSuccess('')
 
       const payload = {
         name: form.name.trim(),
+
+        brand:
+          form.brand.trim() || null,
+
+        size:
+          form.size.trim() || null,
+
         barcode:
           form.barcode.trim() || null,
+
         category_id: Number(
           form.category_id
         ),
+
         base_unit_id: Number(
           form.base_unit_id
         ),
+
         purchase_price: Number(
           form.purchase_price
         ),
+
         selling_price: Number(
           form.selling_price
         ),
-        stock: Number(form.stock),
+
+        stock: Number(
+          form.stock
+        ),
+
         minimum_stock: Number(
           form.minimum_stock
         ),
-        is_active: form.is_active,
+
+        is_active:
+          form.is_active,
       }
 
       if (editingProduct) {
@@ -399,8 +428,8 @@ function Products() {
             </h2>
 
             <p className="mt-1 text-sm text-slate-500">
-              Kelola barang, harga, stok, dan
-              kategori di BuildPOS.
+              Kelola barang, merek, ukuran,
+              harga, stok, dan kategori di BuildPOS.
             </p>
           </div>
 
@@ -524,7 +553,7 @@ function Products() {
 
             <div className="overflow-x-auto">
 
-              <table className="w-full min-w-[1100px]">
+              <table className="w-full min-w-[1250px]">
 
                 <thead>
                   <tr className="border-b border-slate-200 bg-slate-50">
@@ -535,6 +564,14 @@ function Products() {
 
                     <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">
                       Barang
+                    </th>
+
+                    <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">
+                      Merek
+                    </th>
+
+                    <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">
+                      Ukuran
                     </th>
 
                     <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">
@@ -601,6 +638,7 @@ function Products() {
                             {index + 1}
                           </td>
 
+                          {/* BARANG */}
                           <td className="px-6 py-4">
 
                             <p className="text-sm font-semibold text-slate-800">
@@ -616,12 +654,44 @@ function Products() {
 
                           </td>
 
+                          {/* MEREK */}
+                          <td className="px-6 py-4">
+
+                            {product.brand ? (
+                              <span className="text-sm font-medium text-slate-700">
+                                {product.brand}
+                              </span>
+                            ) : (
+                              <span className="text-sm text-slate-400">
+                                -
+                              </span>
+                            )}
+
+                          </td>
+
+                          {/* UKURAN */}
+                          <td className="px-6 py-4">
+
+                            {product.size ? (
+                              <span className="inline-flex rounded-lg bg-slate-100 px-3 py-1.5 text-xs font-semibold text-slate-700">
+                                {product.size}
+                              </span>
+                            ) : (
+                              <span className="text-sm text-slate-400">
+                                -
+                              </span>
+                            )}
+
+                          </td>
+
+                          {/* KATEGORI */}
                           <td className="px-6 py-4 text-sm text-slate-600">
                             {getCategoryName(
                               product
                             )}
                           </td>
 
+                          {/* SATUAN */}
                           <td className="px-6 py-4">
 
                             <span className="inline-flex rounded-lg bg-slate-100 px-3 py-1.5 text-xs font-semibold text-slate-700">
@@ -632,12 +702,14 @@ function Products() {
 
                           </td>
 
+                          {/* HARGA */}
                           <td className="px-6 py-4 text-right text-sm font-semibold text-slate-800">
                             {formatRupiah(
                               product.selling_price
                             )}
                           </td>
 
+                          {/* STOK */}
                           <td className="px-6 py-4 text-right">
 
                             <p
@@ -659,6 +731,7 @@ function Products() {
 
                           </td>
 
+                          {/* STATUS */}
                           <td className="px-6 py-4">
 
                             {product.is_active !==
@@ -674,19 +747,23 @@ function Products() {
 
                           </td>
 
+                          {/* AKSI */}
                           <td className="px-6 py-4">
 
                             <div className="flex justify-end gap-2">
+
                               <button
                                 type="button"
                                 onClick={() =>
-                                    navigate(`/products/${product.id}/units`)
+                                  navigate(
+                                    `/products/${product.id}/units`
+                                  )
                                 }
                                 className="rounded-lg border border-blue-200 px-3 py-2 text-sm font-medium text-blue-600 hover:bg-blue-50"
-                                >
+                              >
                                 Satuan
                               </button>
-                            
+
                               <button
                                 type="button"
                                 onClick={() =>
@@ -699,17 +776,20 @@ function Products() {
                                 Edit
                               </button>
 
-                              <button
-                                type="button"
-                                onClick={() =>
-                                  handleDelete(
-                                    product
-                                  )
-                                }
-                                className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs font-semibold text-red-600 transition hover:bg-red-100"
-                              >
-                                Nonaktifkan
-                              </button>
+                              {product.is_active !==
+                                false && (
+                                <button
+                                  type="button"
+                                  onClick={() =>
+                                    handleDelete(
+                                      product
+                                    )
+                                  }
+                                  className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs font-semibold text-red-600 transition hover:bg-red-100"
+                                >
+                                  Nonaktifkan
+                                </button>
+                              )}
 
                             </div>
 
@@ -782,7 +862,7 @@ function Products() {
                 </div>
               )}
 
-              {/* NAME */}
+              {/* NAMA */}
               <div>
 
                 <label
@@ -801,10 +881,65 @@ function Products() {
                   type="text"
                   value={form.name}
                   onChange={handleChange}
-                  placeholder="Contoh: Semen Kujang 50kg"
+                  placeholder="Contoh: Cat"
                   disabled={saving}
                   className="w-full rounded-xl border border-slate-300 px-4 py-2.5 text-sm outline-none transition placeholder:text-slate-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 disabled:bg-slate-100"
                 />
+
+              </div>
+
+              {/* MEREK + UKURAN */}
+              <div className="grid gap-5 sm:grid-cols-2">
+
+                <div>
+
+                  <label
+                    htmlFor="brand"
+                    className="mb-2 block text-sm font-semibold text-slate-700"
+                  >
+                    Merek
+                    <span className="ml-2 text-xs font-normal text-slate-400">
+                      (Opsional)
+                    </span>
+                  </label>
+
+                  <input
+                    id="brand"
+                    name="brand"
+                    type="text"
+                    value={form.brand}
+                    onChange={handleChange}
+                    placeholder="Contoh: Dulux"
+                    disabled={saving}
+                    className="w-full rounded-xl border border-slate-300 px-4 py-2.5 text-sm outline-none transition placeholder:text-slate-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 disabled:bg-slate-100"
+                  />
+
+                </div>
+
+                <div>
+
+                  <label
+                    htmlFor="size"
+                    className="mb-2 block text-sm font-semibold text-slate-700"
+                  >
+                    Ukuran / Spesifikasi
+                    <span className="ml-2 text-xs font-normal text-slate-400">
+                      (Opsional)
+                    </span>
+                  </label>
+
+                  <input
+                    id="size"
+                    name="size"
+                    type="text"
+                    value={form.size}
+                    onChange={handleChange}
+                    placeholder="Contoh: 2 Kg"
+                    disabled={saving}
+                    className="w-full rounded-xl border border-slate-300 px-4 py-2.5 text-sm outline-none transition placeholder:text-slate-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 disabled:bg-slate-100"
+                  />
+
+                </div>
 
               </div>
 
@@ -958,6 +1093,7 @@ function Products() {
                       name="purchase_price"
                       type="number"
                       min="0"
+                      step="0.01"
                       value={form.purchase_price}
                       onChange={handleChange}
                       placeholder="0"
@@ -992,6 +1128,7 @@ function Products() {
                       name="selling_price"
                       type="number"
                       min="0"
+                      step="0.01"
                       value={form.selling_price}
                       onChange={handleChange}
                       placeholder="0"
@@ -1115,16 +1252,6 @@ function Products() {
                       : 'Tambah Barang'}
                 </button>
 
-                <button
-                    type="button"
-                    onClick={() =>
-                        navigate(`/products/${product.id}/units`)
-                    }
-                    className="rounded-lg border border-blue-200 px-3 py-2 text-sm font-medium text-blue-600 hover:bg-blue-50"
-                    >
-                    Satuan
-                </button>
-
               </div>
 
             </form>
@@ -1132,6 +1259,7 @@ function Products() {
           </div>
         </div>
       )}
+
     </DashboardLayout>
   )
 }
