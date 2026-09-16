@@ -1,17 +1,42 @@
-import { useEffect, useState } from 'react'
+import {
+  useEffect,
+  useMemo,
+  useState,
+} from 'react'
+
+import {
+  AlertCircle,
+  CheckCircle2,
+  Edit3,
+  FolderTree,
+  Plus,
+  RefreshCw,
+  Search,
+  Trash2,
+  X,
+} from 'lucide-react'
+
 import DashboardLayout from '../../components/layout/DashboardLayout'
 import api from '../../services/api'
 
 function Categories() {
   const [categories, setCategories] = useState([])
+
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
 
   const [error, setError] = useState('')
   const [success, setSuccess] = useState('')
 
-  const [showModal, setShowModal] = useState(false)
-  const [editingCategory, setEditingCategory] = useState(null)
+  const [search, setSearch] = useState('')
+  const [statusFilter, setStatusFilter] =
+    useState('all')
+
+  const [showModal, setShowModal] =
+    useState(false)
+
+  const [editingCategory, setEditingCategory] =
+    useState(null)
 
   const [form, setForm] = useState({
     name: '',
@@ -24,17 +49,27 @@ function Categories() {
       setLoading(true)
       setError('')
 
-      const response = await api.get('/categories')
+      const response =
+        await api.get('/categories')
 
-      const data =
-        response.data.data ||
-        response.data
+      const responseData =
+        response.data?.data
 
-      setCategories(
-        Array.isArray(data)
-          ? data
-          : []
-      )
+      let data = []
+
+      if (Array.isArray(responseData)) {
+        data = responseData
+      } else if (
+        Array.isArray(responseData?.data)
+      ) {
+        data = responseData.data
+      } else if (
+        Array.isArray(response.data)
+      ) {
+        data = response.data
+      }
+
+      setCategories(data)
     } catch (error) {
       console.error(
         'Gagal mengambil kategori:',
@@ -43,7 +78,7 @@ function Categories() {
 
       setError(
         error.response?.data?.message ||
-        'Gagal mengambil data kategori.'
+          'Gagal mengambil data kategori.'
       )
     } finally {
       setLoading(false)
@@ -55,8 +90,12 @@ function Categories() {
   }, [])
 
   const handleChange = (event) => {
-    const { name, value, type, checked } =
-      event.target
+    const {
+      name,
+      value,
+      type,
+      checked,
+    } = event.target
 
     setForm((prev) => ({
       ...prev,
@@ -67,15 +106,18 @@ function Categories() {
     }))
   }
 
-  const openCreateModal = () => {
-    setEditingCategory(null)
-
+  const resetForm = () => {
     setForm({
       name: '',
       description: '',
       is_active: true,
     })
 
+    setEditingCategory(null)
+  }
+
+  const openCreateModal = () => {
+    resetForm()
     setError('')
     setSuccess('')
     setShowModal(true)
@@ -101,26 +143,24 @@ function Categories() {
     if (saving) return
 
     setShowModal(false)
-    setEditingCategory(null)
-
-    setForm({
-      name: '',
-      description: '',
-      is_active: true,
-    })
+    resetForm()
+    setError('')
   }
 
   const handleSubmit = async (event) => {
     event.preventDefault()
 
+    setError('')
+
     if (!form.name.trim()) {
-      setError('Nama kategori wajib diisi.')
+      setError(
+        'Nama kategori wajib diisi.'
+      )
       return
     }
 
     try {
       setSaving(true)
-      setError('')
       setSuccess('')
 
       const payload = {
@@ -153,13 +193,7 @@ function Categories() {
       await fetchCategories()
 
       setShowModal(false)
-      setEditingCategory(null)
-
-      setForm({
-        name: '',
-        description: '',
-        is_active: true,
-      })
+      resetForm()
     } catch (error) {
       console.error(
         'Gagal menyimpan kategori:',
@@ -176,12 +210,12 @@ function Categories() {
 
         setError(
           firstError ||
-          'Data kategori tidak valid.'
+            'Data kategori tidak valid.'
         )
       } else {
         setError(
           error.response?.data?.message ||
-          'Gagal menyimpan kategori.'
+            'Gagal menyimpan kategori.'
         )
       }
     } finally {
@@ -190,9 +224,10 @@ function Categories() {
   }
 
   const handleDelete = async (category) => {
-    const confirmed = window.confirm(
-      `Yakin ingin menghapus kategori "${category.name}"?`
-    )
+    const confirmed =
+      window.confirm(
+        `Yakin ingin menghapus kategori "${category.name}"?`
+      )
 
     if (!confirmed) return
 
@@ -217,10 +252,60 @@ function Categories() {
 
       setError(
         error.response?.data?.message ||
-        'Gagal menghapus kategori.'
+          'Gagal menghapus kategori.'
       )
     }
   }
+
+  const filteredCategories = useMemo(() => {
+    const keyword =
+      search.trim().toLowerCase()
+
+    return categories.filter(
+      (category) => {
+        const matchesSearch =
+          !keyword ||
+          category.name
+            ?.toLowerCase()
+            .includes(keyword) ||
+          category.description
+            ?.toLowerCase()
+            .includes(keyword)
+
+        const isActive =
+          category.is_active !== false
+
+        const matchesStatus =
+          statusFilter === 'all' ||
+          (statusFilter === 'active' &&
+            isActive) ||
+          (statusFilter === 'inactive' &&
+            !isActive)
+
+        return (
+          matchesSearch &&
+          matchesStatus
+        )
+      }
+    )
+  }, [
+    categories,
+    search,
+    statusFilter,
+  ])
+
+  const totalCategories =
+    categories.length
+
+  const activeCategories =
+    categories.filter(
+      (category) =>
+        category.is_active !== false
+    ).length
+
+  const inactiveCategories =
+    totalCategories -
+    activeCategories
 
   return (
     <DashboardLayout
@@ -231,82 +316,241 @@ function Categories() {
       <div className="space-y-6">
 
         {/* HEADER */}
-        <div className="flex flex-col gap-4 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm sm:flex-row sm:items-center sm:justify-between">
-          <div>
-            <h2 className="text-xl font-bold text-slate-900">
-              Data Kategori
-            </h2>
+        <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+          <div className="relative overflow-hidden p-6 sm:p-7">
+            <div className="absolute -right-10 -top-16 h-40 w-40 rounded-full bg-blue-50" />
 
-            <p className="mt-1 text-sm text-slate-500">
-              Kelola kategori barang yang digunakan
-              di BuildPOS.
-            </p>
+            <div className="relative flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
+              <div className="flex items-start gap-4">
+                <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-blue-50 text-blue-600">
+                  <FolderTree className="h-6 w-6" />
+                </div>
+
+                <div>
+                  <h2 className="text-xl font-bold tracking-tight text-slate-900">
+                    Data Kategori
+                  </h2>
+
+                  <p className="mt-1 max-w-2xl text-sm leading-6 text-slate-500">
+                    Kelola kategori barang yang
+                    digunakan untuk mengelompokkan
+                    produk di BuildPOS.
+                  </p>
+                </div>
+              </div>
+
+              <button
+                type="button"
+                onClick={openCreateModal}
+                className="inline-flex items-center justify-center gap-2 rounded-xl bg-blue-600 px-4 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-blue-700 active:scale-[0.98]"
+              >
+                <Plus className="h-4 w-4" />
+                Tambah Kategori
+              </button>
+            </div>
           </div>
+        </section>
 
-          <button
-            type="button"
-            onClick={openCreateModal}
-            className="inline-flex items-center justify-center gap-2 rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-blue-700"
-          >
-            <span className="text-lg leading-none">
-              +
-            </span>
-
-            Tambah Kategori
-          </button>
-        </div>
-
-        {/* SUCCESS */}
+        {/* ALERT SUCCESS */}
         {success && (
-          <div className="flex items-center justify-between rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3">
-            <p className="text-sm font-medium text-emerald-700">
+          <div className="flex items-start gap-3 rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3.5">
+            <CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0 text-emerald-600" />
+
+            <p className="flex-1 text-sm font-medium text-emerald-700">
               {success}
             </p>
 
             <button
               type="button"
-              onClick={() => setSuccess('')}
-              className="text-sm font-bold text-emerald-600 hover:text-emerald-800"
+              onClick={() =>
+                setSuccess('')
+              }
+              className="rounded-lg p-1 text-emerald-500 transition hover:bg-emerald-100 hover:text-emerald-700"
+              title="Tutup"
+              aria-label="Tutup notifikasi"
             >
-              ×
+              <X className="h-4 w-4" />
             </button>
           </div>
         )}
 
-        {/* ERROR */}
+        {/* ALERT ERROR */}
         {error && !showModal && (
-          <div className="flex items-center justify-between rounded-xl border border-red-200 bg-red-50 px-4 py-3">
-            <p className="text-sm font-medium text-red-700">
+          <div className="flex items-start gap-3 rounded-2xl border border-red-200 bg-red-50 px-4 py-3.5">
+            <AlertCircle className="mt-0.5 h-5 w-5 shrink-0 text-red-600" />
+
+            <p className="flex-1 text-sm font-medium text-red-700">
               {error}
             </p>
 
             <button
               type="button"
               onClick={() => setError('')}
-              className="text-sm font-bold text-red-600 hover:text-red-800"
+              className="rounded-lg p-1 text-red-500 transition hover:bg-red-100 hover:text-red-700"
+              title="Tutup"
+              aria-label="Tutup notifikasi"
             >
-              ×
+              <X className="h-4 w-4" />
             </button>
           </div>
         )}
 
-        {/* TABLE */}
-        <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+        {/* SUMMARY */}
+        <section className="grid gap-4 sm:grid-cols-3">
 
-          <div className="border-b border-slate-200 px-6 py-5">
-            <div className="flex items-center justify-between">
+          <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+            <div className="flex items-start justify-between">
+              <div>
+                <p className="text-sm font-medium text-slate-500">
+                  Total Kategori
+                </p>
+
+                <p className="mt-2 text-2xl font-bold text-slate-900">
+                  {totalCategories}
+                </p>
+
+                <p className="mt-1 text-xs text-slate-400">
+                  Semua kategori
+                </p>
+              </div>
+
+              <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-blue-50 text-blue-600">
+                <FolderTree className="h-5 w-5" />
+              </div>
+            </div>
+          </div>
+
+          <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+            <div className="flex items-start justify-between">
+              <div>
+                <p className="text-sm font-medium text-slate-500">
+                  Kategori Aktif
+                </p>
+
+                <p className="mt-2 text-2xl font-bold text-emerald-600">
+                  {activeCategories}
+                </p>
+
+                <p className="mt-1 text-xs text-slate-400">
+                  Dapat digunakan
+                </p>
+              </div>
+
+              <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-emerald-50 text-emerald-600">
+                <CheckCircle2 className="h-5 w-5" />
+              </div>
+            </div>
+          </div>
+
+          <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+            <div className="flex items-start justify-between">
+              <div>
+                <p className="text-sm font-medium text-slate-500">
+                  Tidak Aktif
+                </p>
+
+                <p className="mt-2 text-2xl font-bold text-slate-600">
+                  {inactiveCategories}
+                </p>
+
+                <p className="mt-1 text-xs text-slate-400">
+                  Tidak digunakan
+                </p>
+              </div>
+
+              <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-slate-100 text-slate-500">
+                <FolderTree className="h-5 w-5" />
+              </div>
+            </div>
+          </div>
+
+        </section>
+
+        {/* TABLE */}
+        <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+
+          {/* TABLE TOOLBAR */}
+          <div className="border-b border-slate-200 p-5 sm:p-6">
+
+            <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+
               <div>
                 <h3 className="font-bold text-slate-900">
                   Daftar Kategori
                 </h3>
 
                 <p className="mt-1 text-sm text-slate-500">
-                  Total {categories.length} kategori
+                  Menampilkan{' '}
+                  {filteredCategories.length}{' '}
+                  dari {categories.length}{' '}
+                  kategori
                 </p>
               </div>
+
+              <button
+                type="button"
+                onClick={fetchCategories}
+                disabled={loading}
+                className="inline-flex h-10 w-10 shrink-0 items-center justify-center self-end rounded-xl border border-slate-200 text-slate-500 transition hover:bg-slate-50 hover:text-blue-600 disabled:cursor-not-allowed disabled:opacity-50 lg:self-auto"
+                title="Refresh data"
+                aria-label="Refresh data kategori"
+              >
+                <RefreshCw
+                  className={`h-4 w-4 ${
+                    loading
+                      ? 'animate-spin'
+                      : ''
+                  }`}
+                />
+              </button>
+
+            </div>
+
+            {/* SEARCH + FILTER */}
+            <div className="mt-5 flex flex-col gap-3 sm:flex-row">
+
+              <div className="relative flex-1">
+                <Search className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+
+                <input
+                  type="text"
+                  value={search}
+                  onChange={(event) =>
+                    setSearch(
+                      event.target.value
+                    )
+                  }
+                  placeholder="Cari kategori atau deskripsi..."
+                  className="w-full rounded-xl border border-slate-300 bg-white py-2.5 pl-10 pr-4 text-sm outline-none transition placeholder:text-slate-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+                />
+              </div>
+
+              <select
+                value={statusFilter}
+                onChange={(event) =>
+                  setStatusFilter(
+                    event.target.value
+                  )
+                }
+                className="rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-sm font-medium text-slate-600 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100 sm:w-44"
+              >
+                <option value="all">
+                  Semua Status
+                </option>
+
+                <option value="active">
+                  Aktif
+                </option>
+
+                <option value="inactive">
+                  Tidak Aktif
+                </option>
+              </select>
+
             </div>
           </div>
 
+          {/* CONTENT */}
           {loading ? (
             <div className="px-6 py-16 text-center">
               <div className="mx-auto h-8 w-8 animate-spin rounded-full border-4 border-slate-200 border-t-blue-600" />
@@ -315,180 +559,242 @@ function Categories() {
                 Memuat data kategori...
               </p>
             </div>
-          ) : categories.length === 0 ? (
+          ) : filteredCategories.length ===
+            0 ? (
             <div className="px-6 py-16 text-center">
-              <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-slate-100 text-2xl">
-                📁
+
+              <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-slate-100 text-slate-400">
+                <FolderTree className="h-7 w-7" />
               </div>
 
               <h3 className="mt-4 text-sm font-semibold text-slate-800">
-                Belum ada kategori
+                {categories.length === 0
+                  ? 'Belum ada kategori'
+                  : 'Kategori tidak ditemukan'}
               </h3>
 
               <p className="mt-1 text-sm text-slate-500">
-                Tambahkan kategori pertama untuk
-                mulai mengelola barang.
+                {categories.length === 0
+                  ? 'Tambahkan kategori pertama untuk mulai mengelola barang.'
+                  : 'Coba gunakan kata kunci pencarian atau filter yang berbeda.'}
               </p>
 
-              <button
-                type="button"
-                onClick={openCreateModal}
-                className="mt-5 rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-blue-700"
-              >
-                Tambah Kategori
-              </button>
+              {categories.length ===
+                0 && (
+                <button
+                  type="button"
+                  onClick={
+                    openCreateModal
+                  }
+                  className="mt-5 inline-flex items-center gap-2 rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-blue-700"
+                >
+                  <Plus className="h-4 w-4" />
+                  Tambah Kategori
+                </button>
+              )}
+
             </div>
           ) : (
             <div className="overflow-x-auto">
-              <table className="w-full min-w-[700px]">
+
+              <table className="w-full min-w-[800px]">
+
                 <thead>
                   <tr className="border-b border-slate-200 bg-slate-50">
-                    <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">
+
+                    <th className="w-16 px-6 py-3 text-left text-xs font-bold uppercase tracking-wider text-slate-500">
                       #
                     </th>
 
-                    <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">
-                      Nama Kategori
+                    <th className="px-6 py-3 text-left text-xs font-bold uppercase tracking-wider text-slate-500">
+                      Kategori
                     </th>
 
-                    <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">
+                    <th className="px-6 py-3 text-left text-xs font-bold uppercase tracking-wider text-slate-500">
                       Deskripsi
                     </th>
 
-                    <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">
+                    <th className="px-6 py-3 text-left text-xs font-bold uppercase tracking-wider text-slate-500">
                       Status
                     </th>
 
-                    <th className="px-6 py-3 text-right text-xs font-semibold uppercase tracking-wider text-slate-500">
+                    <th className="w-32 px-6 py-3 text-right text-xs font-bold uppercase tracking-wider text-slate-500">
                       Aksi
                     </th>
+
                   </tr>
                 </thead>
 
                 <tbody>
-                  {categories.map(
-                    (category, index) => (
-                      <tr
-                        key={category.id}
-                        className="border-b border-slate-100 transition hover:bg-slate-50"
-                      >
-                        <td className="px-6 py-4 text-sm text-slate-500">
-                          {index + 1}
-                        </td>
+                  {filteredCategories.map(
+                    (category, index) => {
+                      const isActive =
+                        category.is_active !==
+                        false
 
-                        <td className="px-6 py-4">
-                          <p className="text-sm font-semibold text-slate-800">
-                            {category.name}
-                          </p>
-                        </td>
+                      return (
+                        <tr
+                          key={
+                            category.id
+                          }
+                          className="border-b border-slate-100 transition hover:bg-slate-50 last:border-0"
+                        >
 
-                        <td className="max-w-md px-6 py-4 text-sm text-slate-500">
-                          {category.description ||
-                            '-'}
-                        </td>
+                          <td className="px-6 py-4 text-sm text-slate-400">
+                            {index + 1}
+                          </td>
 
-                        <td className="px-6 py-4">
-                          {category.is_active !==
-                          false ? (
-                            <span className="inline-flex rounded-full bg-emerald-100 px-2.5 py-1 text-xs font-semibold text-emerald-700">
-                              Aktif
-                            </span>
-                          ) : (
-                            <span className="inline-flex rounded-full bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-600">
-                              Tidak Aktif
-                            </span>
-                          )}
-                        </td>
+                          <td className="px-6 py-4">
+                            <div className="flex items-center gap-3">
 
-                        <td className="px-6 py-4">
-                          <div className="flex justify-end gap-2">
+                              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-blue-50 text-blue-600">
+                                <FolderTree className="h-4 w-4" />
+                              </div>
 
-                            <button
-                              type="button"
-                              onClick={() =>
-                                openEditModal(
-                                  category
-                                )
-                              }
-                              className="rounded-lg border border-blue-200 bg-blue-50 px-3 py-2 text-xs font-semibold text-blue-600 transition hover:bg-blue-100"
-                            >
-                              Edit
-                            </button>
+                              <div className="min-w-0">
+                                <p className="truncate text-sm font-semibold text-slate-800">
+                                  {
+                                    category.name
+                                  }
+                                </p>
 
-                            <button
-                              type="button"
-                              onClick={() =>
-                                handleDelete(
-                                  category
-                                )
-                              }
-                              className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs font-semibold text-red-600 transition hover:bg-red-100"
-                            >
-                              Hapus
-                            </button>
+                                <p className="mt-0.5 text-xs text-slate-400">
+                                  ID #{category.id}
+                                </p>
+                              </div>
 
-                          </div>
-                        </td>
-                      </tr>
-                    )
+                            </div>
+                          </td>
+
+                          <td className="max-w-md px-6 py-4">
+                            <p className="truncate text-sm text-slate-500">
+                              {category.description ||
+                                '-'}
+                            </p>
+                          </td>
+
+                          <td className="px-6 py-4">
+                            {isActive ? (
+                              <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-50 px-2.5 py-1.5 text-xs font-semibold text-emerald-700">
+                                <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
+                                Aktif
+                              </span>
+                            ) : (
+                              <span className="inline-flex items-center gap-1.5 rounded-full bg-slate-100 px-2.5 py-1.5 text-xs font-semibold text-slate-600">
+                                <span className="h-1.5 w-1.5 rounded-full bg-slate-400" />
+                                Tidak Aktif
+                              </span>
+                            )}
+                          </td>
+
+                          <td className="px-6 py-4">
+                            <div className="flex justify-end gap-2">
+
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  openEditModal(
+                                    category
+                                  )
+                                }
+                                className="flex h-9 w-9 items-center justify-center rounded-lg border border-blue-200 bg-blue-50 text-blue-600 transition hover:bg-blue-100"
+                                title="Edit kategori"
+                                aria-label={`Edit kategori ${category.name}`}
+                              >
+                                <Edit3 className="h-4 w-4" />
+                              </button>
+
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  handleDelete(
+                                    category
+                                  )
+                                }
+                                className="flex h-9 w-9 items-center justify-center rounded-lg border border-red-200 bg-red-50 text-red-600 transition hover:bg-red-100"
+                                title="Hapus kategori"
+                                aria-label={`Hapus kategori ${category.name}`}
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </button>
+
+                            </div>
+                          </td>
+
+                        </tr>
+                      )
+                    }
                   )}
                 </tbody>
+
               </table>
             </div>
           )}
-        </div>
+
+        </section>
       </div>
 
       {/* MODAL */}
       {showModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 p-4">
-          <div className="w-full max-w-lg rounded-2xl bg-white shadow-2xl">
+        <div className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-slate-900/50 p-4 backdrop-blur-[2px]">
 
-            {/* MODAL HEADER */}
+          <div className="my-8 w-full max-w-lg overflow-hidden rounded-2xl bg-white shadow-2xl">
+
+            {/* HEADER */}
             <div className="flex items-center justify-between border-b border-slate-200 px-6 py-5">
-              <div>
-                <h3 className="text-lg font-bold text-slate-900">
-                  {editingCategory
-                    ? 'Edit Kategori'
-                    : 'Tambah Kategori'}
-                </h3>
 
-                <p className="mt-1 text-sm text-slate-500">
-                  {editingCategory
-                    ? 'Perbarui informasi kategori.'
-                    : 'Tambahkan kategori barang baru.'}
-                </p>
+              <div className="flex items-center gap-3">
+                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-blue-50 text-blue-600">
+                  <FolderTree className="h-5 w-5" />
+                </div>
+
+                <div>
+                  <h3 className="text-lg font-bold text-slate-900">
+                    {editingCategory
+                      ? 'Edit Kategori'
+                      : 'Tambah Kategori'}
+                  </h3>
+
+                  <p className="mt-0.5 text-xs text-slate-500">
+                    {editingCategory
+                      ? 'Perbarui informasi kategori.'
+                      : 'Tambahkan kategori barang baru.'}
+                  </p>
+                </div>
               </div>
 
               <button
                 type="button"
                 onClick={closeModal}
                 disabled={saving}
-                className="flex h-9 w-9 items-center justify-center rounded-lg text-xl text-slate-400 transition hover:bg-slate-100 hover:text-slate-700 disabled:cursor-not-allowed disabled:opacity-50"
+                className="flex h-9 w-9 items-center justify-center rounded-lg text-slate-400 transition hover:bg-slate-100 hover:text-slate-700 disabled:cursor-not-allowed disabled:opacity-50"
+                title="Tutup"
+                aria-label="Tutup modal"
               >
-                ×
+                <X className="h-5 w-5" />
               </button>
+
             </div>
 
-            {/* MODAL BODY */}
+            {/* FORM */}
             <form
               onSubmit={handleSubmit}
               className="space-y-5 px-6 py-6"
             >
 
-              {/* MODAL ERROR */}
               {error && (
-                <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3">
+                <div className="flex items-start gap-3 rounded-xl border border-red-200 bg-red-50 px-4 py-3">
+                  <AlertCircle className="mt-0.5 h-4 w-4 shrink-0 text-red-600" />
+
                   <p className="text-sm font-medium text-red-700">
                     {error}
                   </p>
                 </div>
               )}
 
-              {/* NAME */}
               <div>
                 <label
-                  htmlFor="name"
+                  htmlFor="category-name"
                   className="mb-2 block text-sm font-semibold text-slate-700"
                 >
                   Nama Kategori
@@ -498,28 +804,31 @@ function Categories() {
                 </label>
 
                 <input
-                  id="name"
+                  id="category-name"
                   name="name"
                   type="text"
                   value={form.name}
                   onChange={handleChange}
                   placeholder="Contoh: Semen"
                   disabled={saving}
+                  autoFocus
                   className="w-full rounded-xl border border-slate-300 px-4 py-2.5 text-sm outline-none transition placeholder:text-slate-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 disabled:bg-slate-100"
                 />
               </div>
 
-              {/* DESCRIPTION */}
               <div>
                 <label
-                  htmlFor="description"
+                  htmlFor="category-description"
                   className="mb-2 block text-sm font-semibold text-slate-700"
                 >
                   Deskripsi
+                  <span className="ml-2 text-xs font-normal text-slate-400">
+                    Opsional
+                  </span>
                 </label>
 
                 <textarea
-                  id="description"
+                  id="category-description"
                   name="description"
                   rows="4"
                   value={form.description}
@@ -530,15 +839,15 @@ function Categories() {
                 />
               </div>
 
-              {/* STATUS */}
-              <label className="flex cursor-pointer items-center gap-3 rounded-xl border border-slate-200 bg-slate-50 p-4">
+              <label className="flex cursor-pointer items-start gap-3 rounded-xl border border-slate-200 bg-slate-50 p-4 transition hover:bg-slate-100">
+
                 <input
                   type="checkbox"
                   name="is_active"
                   checked={form.is_active}
                   onChange={handleChange}
                   disabled={saving}
-                  className="h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+                  className="mt-0.5 h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
                 />
 
                 <div>
@@ -546,14 +855,15 @@ function Categories() {
                     Kategori Aktif
                   </p>
 
-                  <p className="text-xs text-slate-500">
-                    Kategori dapat digunakan untuk
-                    produk jika status aktif.
+                  <p className="mt-1 text-xs leading-5 text-slate-500">
+                    Kategori dapat dipilih saat
+                    membuat atau mengedit produk.
                   </p>
                 </div>
+
               </label>
 
-              {/* MODAL FOOTER */}
+              {/* FOOTER */}
               <div className="flex justify-end gap-3 border-t border-slate-200 pt-5">
 
                 <button
@@ -568,16 +878,25 @@ function Categories() {
                 <button
                   type="submit"
                   disabled={saving}
-                  className="rounded-xl bg-blue-600 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60"
+                  className="inline-flex items-center gap-2 rounded-xl bg-blue-600 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60"
                 >
-                  {saving
-                    ? 'Menyimpan...'
-                    : editingCategory
-                      ? 'Simpan Perubahan'
-                      : 'Tambah Kategori'}
+                  {saving ? (
+                    <>
+                      <RefreshCw className="h-4 w-4 animate-spin" />
+                      Menyimpan...
+                    </>
+                  ) : (
+                    <>
+                      <CheckCircle2 className="h-4 w-4" />
+                      {editingCategory
+                        ? 'Simpan Perubahan'
+                        : 'Tambah Kategori'}
+                    </>
+                  )}
                 </button>
 
               </div>
+
             </form>
           </div>
         </div>

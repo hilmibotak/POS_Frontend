@@ -20,6 +20,23 @@ function formatRupiah(value) {
   }).format(Number(value) || 0)
 }
 
+// Format angka stok
+// 50.000 -> 50
+// 100.000 -> 100
+// 5400.000 -> 5400
+// 2.500 -> 2,5
+function formatStock(value) {
+  const number = Number(value ?? 0)
+
+  if (Number.isInteger(number)) {
+    return number.toString()
+  }
+
+  return number.toLocaleString('id-ID', {
+    maximumFractionDigits: 3,
+  })
+}
+
 function getProductDisplayName(product) {
   if (!product) {
     return 'Produk'
@@ -281,7 +298,9 @@ export default function Cashier() {
       baseQuantity > Number(selectedProduct.stock)
     ) {
       setError(
-        `Stok tidak mencukupi. Stok tersedia ${selectedProduct.stock} ${getBaseUnitName(selectedProduct)}.`
+        `Stok tidak mencukupi. Stok tersedia ${formatStock(
+          selectedProduct.stock
+        )} ${getBaseUnitName(selectedProduct)}.`
       )
       return
     }
@@ -334,7 +353,9 @@ export default function Cashier() {
         newBaseQuantity > Number(selectedProduct.stock)
       ) {
         setError(
-          `Jumlah melebihi stok ${selectedProduct.stock} ${getBaseUnitName(selectedProduct)}.`
+          `Jumlah melebihi stok ${formatStock(
+            selectedProduct.stock
+          )} ${getBaseUnitName(selectedProduct)}.`
         )
 
         return prevCart
@@ -372,7 +393,9 @@ export default function Cashier() {
         baseQuantity > Number(item.product.stock)
       ) {
         setError(
-          `Stok ${getProductDisplayName(item.product)} tidak mencukupi.`
+          `Stok ${getProductDisplayName(
+            item.product
+          )} tidak mencukupi.`
         )
 
         return prevCart
@@ -680,7 +703,7 @@ export default function Cashier() {
                                   : 'text-gray-900'
                               }`}
                             >
-                              {product.stock}{' '}
+                              {formatStock(product.stock)}{' '}
                               {getBaseUnitName(product)}
                             </p>
                           </div>
@@ -961,7 +984,7 @@ export default function Cashier() {
                   </span>
 
                   <span className="font-semibold text-gray-900">
-                    {selectedProduct.stock}{' '}
+                    {formatStock(selectedProduct.stock)}{' '}
                     {getBaseUnitName(selectedProduct)}
                   </span>
                 </div>

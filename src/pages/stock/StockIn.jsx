@@ -20,6 +20,36 @@ function formatNumber(value) {
   })
 }
 
+function getProductDisplayName(product) {
+  if (!product) {
+    return '-'
+  }
+
+  const name = String(
+    product.name || ''
+  ).trim()
+
+  const brand = String(
+    product.brand || ''
+  ).trim()
+
+  if (brand) {
+    return `${name} ${brand}`
+  }
+
+  return name || '-'
+}
+
+function getProductSize(product) {
+  if (!product) {
+    return ''
+  }
+
+  return String(
+    product.size || ''
+  ).trim()
+}
+
 export default function StockIn() {
   const navigate = useNavigate()
 
@@ -28,8 +58,11 @@ export default function StockIn() {
   const [quantity, setQuantity] = useState('')
   const [note, setNote] = useState('')
 
-  const [loadingProducts, setLoadingProducts] = useState(true)
+  const [loadingProducts, setLoadingProducts] =
+    useState(true)
+
   const [saving, setSaving] = useState(false)
+
   const [error, setError] = useState('')
   const [success, setSuccess] = useState('')
 
@@ -42,16 +75,21 @@ export default function StockIn() {
       setLoadingProducts(true)
       setError('')
 
-      const response = await api.get('/products')
+      const response = await api.get(
+        '/products'
+      )
 
       console.log(
         'PRODUCTS FOR STOCK IN:',
         response.data
       )
 
-      const responseData = response.data?.data
+      const responseData =
+        response.data?.data
 
-      const data = Array.isArray(responseData)
+      const data = Array.isArray(
+        responseData
+      )
         ? responseData
         : responseData?.data || []
 
@@ -71,10 +109,12 @@ export default function StockIn() {
     }
   }
 
-  const selectedProduct = products.find(
-    (product) =>
-      String(product.id) === String(productId)
-  )
+  const selectedProduct =
+    products.find(
+      (product) =>
+        String(product.id) ===
+        String(productId)
+    )
 
   const getUnitName = (product) => {
     return (
@@ -86,7 +126,9 @@ export default function StockIn() {
     )
   }
 
-  const handleSubmit = async (event) => {
+  const handleSubmit = async (
+    event
+  ) => {
     event.preventDefault()
 
     setError('')
@@ -99,7 +141,10 @@ export default function StockIn() {
       return
     }
 
-    if (!quantity || Number(quantity) <= 0) {
+    if (
+      !quantity ||
+      Number(quantity) <= 0
+    ) {
       setError(
         'Jumlah stok harus lebih dari 0.'
       )
@@ -112,7 +157,9 @@ export default function StockIn() {
       const payload = {
         product_id: Number(productId),
         quantity: Number(quantity),
-        note: note.trim() || 'Stok masuk',
+        note:
+          note.trim() ||
+          'Stok masuk',
       }
 
       console.log(
@@ -120,10 +167,11 @@ export default function StockIn() {
         payload
       )
 
-      const response = await api.post(
-        '/stock-movements/in',
-        payload
-      )
+      const response =
+        await api.post(
+          '/stock-movements/in',
+          payload
+        )
 
       console.log(
         'STOCK IN RESPONSE:',
@@ -139,8 +187,8 @@ export default function StockIn() {
       setQuantity('')
       setNote('')
 
-      // Tunggu sebentar supaya user melihat
-      // pesan berhasil.
+      // Tunggu sebentar supaya user
+      // melihat pesan berhasil.
       setTimeout(() => {
         navigate('/stock')
       }, 800)
@@ -150,7 +198,9 @@ export default function StockIn() {
         err
       )
 
-      if (err.response?.status === 422) {
+      if (
+        err.response?.status === 422
+      ) {
         const validationErrors =
           err.response?.data?.errors
 
@@ -270,38 +320,110 @@ export default function StockIn() {
                     : 'Pilih barang'}
                 </option>
 
-                {products.map((product) => (
-                  <option
-                    key={product.id}
-                    value={product.id}
-                  >
-                    {product.name}
-                  </option>
-                ))}
+                {products
+                  .filter(
+                    (product) =>
+                      product.is_active !==
+                      false
+                  )
+                  .map((product) => (
+                    <option
+                      key={product.id}
+                      value={product.id}
+                    >
+                      {getProductDisplayName(
+                        product
+                      )}
+
+                      {getProductSize(
+                        product
+                      )
+                        ? ` — ${getProductSize(
+                            product
+                          )}`
+                        : ''}
+
+                      {` — ${getUnitName(
+                        product
+                      )}`}
+                    </option>
+                  ))}
               </select>
+
+              <p className="mt-1 text-xs text-gray-400">
+                Pilih barang berdasarkan nama, merek, ukuran, dan satuannya.
+              </p>
             </div>
 
             {/* ==========================
-                CURRENT STOCK
+                SELECTED PRODUCT INFO
             ========================== */}
 
             {selectedProduct && (
-              <div className="rounded-lg bg-gray-50 p-4">
-                <p className="text-sm text-gray-500">
-                  Stok saat ini
-                </p>
+              <div className="rounded-xl border border-blue-100 bg-blue-50 p-4">
 
-                <p className="mt-1 text-xl font-bold text-gray-900">
-                  {formatNumber(
-                    selectedProduct.stock
-                  )}{' '}
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
 
-                  <span className="text-sm font-medium text-gray-500">
+                  <div>
+                    <p className="text-xs font-medium text-blue-600">
+                      Barang yang dipilih
+                    </p>
+
+                    <p className="mt-1 text-lg font-bold text-gray-900">
+                      {getProductDisplayName(
+                        selectedProduct
+                      )}
+                    </p>
+
+                    {getProductSize(
+                      selectedProduct
+                    ) && (
+                      <p className="mt-1 text-sm font-medium text-gray-600">
+                        Ukuran:{' '}
+                        {getProductSize(
+                          selectedProduct
+                        )}
+                      </p>
+                    )}
+
+                    {selectedProduct.barcode && (
+                      <p className="mt-1 text-xs text-gray-400">
+                        Barcode:{' '}
+                        {
+                          selectedProduct.barcode
+                        }
+                      </p>
+                    )}
+                  </div>
+
+                  <span className="inline-flex w-fit rounded-lg bg-white px-3 py-1.5 text-xs font-semibold text-blue-600">
                     {getUnitName(
                       selectedProduct
                     )}
                   </span>
-                </p>
+
+                </div>
+
+                <div className="mt-4 border-t border-blue-100 pt-3">
+
+                  <p className="text-sm text-gray-500">
+                    Stok saat ini
+                  </p>
+
+                  <p className="mt-1 text-xl font-bold text-gray-900">
+                    {formatNumber(
+                      selectedProduct.stock
+                    )}{' '}
+
+                    <span className="text-sm font-medium text-gray-500">
+                      {getUnitName(
+                        selectedProduct
+                      )}
+                    </span>
+                  </p>
+
+                </div>
+
               </div>
             )}
 
@@ -315,6 +437,7 @@ export default function StockIn() {
               </label>
 
               <div className="relative">
+
                 <input
                   type="number"
                   min="0.001"
@@ -337,6 +460,7 @@ export default function StockIn() {
                     )}
                   </span>
                 )}
+
               </div>
 
               <p className="mt-1 text-xs text-gray-400">
@@ -352,11 +476,13 @@ export default function StockIn() {
               quantity &&
               Number(quantity) > 0 && (
                 <div className="rounded-lg border border-blue-200 bg-blue-50 p-4">
+
                   <p className="text-sm text-blue-600">
                     Stok setelah ditambahkan
                   </p>
 
                   <p className="mt-1 text-xl font-bold text-blue-900">
+
                     {formatNumber(
                       Number(
                         selectedProduct.stock ||
@@ -370,7 +496,9 @@ export default function StockIn() {
                         selectedProduct
                       )}
                     </span>
+
                   </p>
+
                 </div>
               )}
 

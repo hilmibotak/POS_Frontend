@@ -2,6 +2,13 @@ import { useEffect, useState } from 'react'
 import DashboardLayout from '../../components/layout/DashboardLayout'
 import api from '../../services/api'
 import { useAuth } from '../../context/AuthContext'
+import {
+  ArrowDownToLine,
+  ArrowUpFromLine,
+  RotateCcw,
+  Search,
+  Filter,
+} from 'lucide-react'
 
 function formatRupiah(value) {
   return new Intl.NumberFormat('id-ID', {
@@ -38,6 +45,26 @@ function formatDate(value) {
     day: '2-digit',
     month: 'long',
     year: 'numeric',
+  })
+}
+
+function formatDateTime(value) {
+  if (!value) {
+    return '-'
+  }
+
+  const date = new Date(value)
+
+  if (Number.isNaN(date.getTime())) {
+    return String(value)
+  }
+
+  return date.toLocaleString('id-ID', {
+    day: '2-digit',
+    month: 'short',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
   })
 }
 
@@ -111,6 +138,21 @@ export default function Reports() {
 
   /*
   |--------------------------------------------------------------------------
+  | Stock Movement State
+  |--------------------------------------------------------------------------
+  */
+
+  const [movementStartDate, setMovementStartDate] =
+    useState(firstDayOfMonth)
+
+  const [movementEndDate, setMovementEndDate] =
+    useState(today)
+
+  const [movementType, setMovementType] =
+    useState('all')
+
+  /*
+  |--------------------------------------------------------------------------
   | Fetch Sales
   |--------------------------------------------------------------------------
   */
@@ -165,7 +207,10 @@ export default function Reports() {
 
   const fetchStockReport = async (
     customStatus = stockStatus,
-    customSearch = stockSearch
+    customSearch = stockSearch,
+    customMovementStartDate = movementStartDate,
+    customMovementEndDate = movementEndDate,
+    customMovementType = movementType
   ) => {
     try {
       setStockLoading(true)
@@ -176,9 +221,21 @@ export default function Reports() {
         {
           params: {
             status: customStatus,
+
             search:
               customSearch.trim() ||
               undefined,
+
+            movement_start_date:
+              customMovementStartDate ||
+              undefined,
+
+            movement_end_date:
+              customMovementEndDate ||
+              undefined,
+
+            movement_type:
+              customMovementType,
           },
         }
       )
@@ -270,17 +327,26 @@ export default function Reports() {
 
     fetchStockReport(
       stockStatus,
-      stockSearch
+      stockSearch,
+      movementStartDate,
+      movementEndDate,
+      movementType
     )
   }
 
   const handleStockReset = () => {
     setStockStatus('all')
     setStockSearch('')
+    setMovementStartDate(firstDayOfMonth)
+    setMovementEndDate(today)
+    setMovementType('all')
 
     fetchStockReport(
       'all',
-      ''
+      '',
+      firstDayOfMonth,
+      today,
+      'all'
     )
   }
 
@@ -307,6 +373,18 @@ export default function Reports() {
 
   const products =
     stockData?.products || []
+
+  /*
+  |--------------------------------------------------------------------------
+  | Movement Data
+  |--------------------------------------------------------------------------
+  */
+
+  const movementSummary =
+    stockData?.movement_summary || {}
+
+  const movements =
+    stockData?.movements || []
 
   /*
   |--------------------------------------------------------------------------
@@ -463,6 +541,8 @@ export default function Reports() {
                   <button
                     type="submit"
                     disabled={salesLoading}
+                    title="Tampilkan laporan"
+                    aria-label="Tampilkan laporan"
                     className="flex-1 rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-gray-300"
                   >
                     {salesLoading
@@ -473,6 +553,8 @@ export default function Reports() {
                   <button
                     type="button"
                     onClick={handleSalesReset}
+                    title="Reset filter"
+                    aria-label="Reset filter"
                     className="rounded-lg border border-gray-300 px-4 py-2.5 text-sm font-semibold text-gray-700 hover:bg-gray-50"
                   >
                     Reset
@@ -717,9 +799,22 @@ export default function Reports() {
 
           <div className="space-y-6">
 
-            {/* Filter */}
+            {/* Filter Stok */}
 
             <div className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
+
+              <div className="mb-4 flex items-center gap-2">
+
+                <Filter
+                  size={18}
+                  className="text-gray-500"
+                />
+
+                <h2 className="font-bold text-gray-900">
+                  Filter Laporan Stok
+                </h2>
+
+              </div>
 
               <form
                 onSubmit={handleStockFilter}
@@ -732,17 +827,26 @@ export default function Reports() {
                     Cari Barang
                   </label>
 
-                  <input
-                    type="text"
-                    value={stockSearch}
-                    onChange={(event) =>
-                      setStockSearch(
-                        event.target.value
-                      )
-                    }
-                    placeholder="Nama atau barcode..."
-                    className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
-                  />
+                  <div className="relative">
+
+                    <Search
+                      size={18}
+                      className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"
+                    />
+
+                    <input
+                      type="text"
+                      value={stockSearch}
+                      onChange={(event) =>
+                        setStockSearch(
+                          event.target.value
+                        )
+                      }
+                      placeholder="Nama, merek, ukuran, atau barcode..."
+                      className="w-full rounded-lg border border-gray-300 py-2.5 pl-10 pr-3 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+                    />
+
+                  </div>
 
                 </div>
 
@@ -787,6 +891,8 @@ export default function Reports() {
                   <button
                     type="submit"
                     disabled={stockLoading}
+                    title="Tampilkan laporan stok"
+                    aria-label="Tampilkan laporan stok"
                     className="flex-1 rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-gray-300"
                   >
                     {stockLoading
@@ -797,6 +903,8 @@ export default function Reports() {
                   <button
                     type="button"
                     onClick={handleStockReset}
+                    title="Reset filter stok"
+                    aria-label="Reset filter stok"
                     className="rounded-lg border border-gray-300 px-4 py-2.5 text-sm font-semibold text-gray-700 hover:bg-gray-50"
                   >
                     Reset
@@ -868,6 +976,104 @@ export default function Reports() {
 
             </div>
 
+            {/* Movement Summary */}
+
+            <div className="grid gap-4 md:grid-cols-3">
+
+              <div className="rounded-xl border border-blue-200 bg-blue-50 p-5">
+
+                <div className="flex items-center justify-between">
+
+                  <div>
+
+                    <p className="text-sm text-blue-700">
+                      Total Pergerakan
+                    </p>
+
+                    <p className="mt-2 text-2xl font-bold text-blue-700">
+                      {movementSummary.total_movements ?? 0}
+                    </p>
+
+                  </div>
+
+                  <div className="rounded-lg bg-white p-2 text-blue-600 shadow-sm">
+
+                    <RotateCcw size={22} />
+
+                  </div>
+
+                </div>
+
+              </div>
+
+              <div className="rounded-xl border border-green-200 bg-green-50 p-5">
+
+                <div className="flex items-center justify-between">
+
+                  <div>
+
+                    <p className="text-sm text-green-700">
+                      Barang Masuk
+                    </p>
+
+                    <p className="mt-2 text-2xl font-bold text-green-700">
+                      {formatQuantity(
+                        movementSummary.total_in_quantity
+                      )}
+                    </p>
+
+                    <p className="mt-1 text-xs text-green-600">
+                      {movementSummary.total_in_movements ?? 0}{' '}
+                      pergerakan
+                    </p>
+
+                  </div>
+
+                  <div className="rounded-lg bg-white p-2 text-green-600 shadow-sm">
+
+                    <ArrowDownToLine size={22} />
+
+                  </div>
+
+                </div>
+
+              </div>
+
+              <div className="rounded-xl border border-red-200 bg-red-50 p-5">
+
+                <div className="flex items-center justify-between">
+
+                  <div>
+
+                    <p className="text-sm text-red-700">
+                      Barang Keluar
+                    </p>
+
+                    <p className="mt-2 text-2xl font-bold text-red-700">
+                      {formatQuantity(
+                        movementSummary.total_out_quantity
+                      )}
+                    </p>
+
+                    <p className="mt-1 text-xs text-red-600">
+                      {movementSummary.total_out_movements ?? 0}{' '}
+                      pergerakan
+                    </p>
+
+                  </div>
+
+                  <div className="rounded-lg bg-white p-2 text-red-600 shadow-sm">
+
+                    <ArrowUpFromLine size={22} />
+
+                  </div>
+
+                </div>
+
+              </div>
+
+            </div>
+
             {/* Inventory Value */}
 
             <div className="grid gap-4 md:grid-cols-2">
@@ -910,6 +1116,123 @@ export default function Reports() {
 
             </div>
 
+            {/* Stock Movement Filter */}
+
+            <div className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
+
+              <div className="mb-4">
+
+                <h2 className="font-bold text-gray-900">
+                  Filter Pergerakan Stok
+                </h2>
+
+                <p className="mt-1 text-sm text-gray-500">
+                  Lihat barang yang masuk dan keluar berdasarkan periode.
+                </p>
+
+              </div>
+
+              <div className="grid gap-4 md:grid-cols-3">
+
+                <div>
+
+                  <label className="mb-2 block text-sm font-medium text-gray-700">
+                    Tanggal Mulai
+                  </label>
+
+                  <input
+                    type="date"
+                    value={movementStartDate}
+                    onChange={(event) =>
+                      setMovementStartDate(
+                        event.target.value
+                      )
+                    }
+                    className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+                  />
+
+                </div>
+
+                <div>
+
+                  <label className="mb-2 block text-sm font-medium text-gray-700">
+                    Tanggal Akhir
+                  </label>
+
+                  <input
+                    type="date"
+                    value={movementEndDate}
+                    onChange={(event) =>
+                      setMovementEndDate(
+                        event.target.value
+                      )
+                    }
+                    className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+                  />
+
+                </div>
+
+                <div>
+
+                  <label className="mb-2 block text-sm font-medium text-gray-700">
+                    Jenis Pergerakan
+                  </label>
+
+                  <select
+                    value={movementType}
+                    onChange={(event) =>
+                      setMovementType(
+                        event.target.value
+                      )
+                    }
+                    className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2.5 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+                  >
+
+                    <option value="all">
+                      Semua
+                    </option>
+
+                    <option value="in">
+                      Barang Masuk
+                    </option>
+
+                    <option value="out">
+                      Barang Keluar
+                    </option>
+
+                  </select>
+
+                </div>
+
+              </div>
+
+              <div className="mt-4 flex justify-end">
+
+                <button
+                  type="button"
+                  onClick={() =>
+                    fetchStockReport(
+                      stockStatus,
+                      stockSearch,
+                      movementStartDate,
+                      movementEndDate,
+                      movementType
+                    )
+                  }
+                  disabled={stockLoading}
+                  title="Tampilkan pergerakan stok"
+                  aria-label="Tampilkan pergerakan stok"
+                  className="rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-gray-300"
+                >
+                  {stockLoading
+                    ? 'Memuat...'
+                    : 'Tampilkan'}
+                </button>
+
+              </div>
+
+            </div>
+
             {/* Stock Table */}
 
             <div className="overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm">
@@ -928,7 +1251,7 @@ export default function Reports() {
 
               <div className="overflow-x-auto">
 
-                <table className="w-full min-w-[1100px] text-sm">
+                <table className="w-full min-w-[1200px] text-sm">
 
                   <thead className="bg-gray-50">
 
@@ -940,6 +1263,14 @@ export default function Reports() {
 
                       <th className="px-5 py-4 text-left">
                         Barang
+                      </th>
+
+                      <th className="px-5 py-4 text-left">
+                        Merek
+                      </th>
+
+                      <th className="px-5 py-4 text-left">
+                        Ukuran
                       </th>
 
                       <th className="px-5 py-4 text-left">
@@ -981,7 +1312,7 @@ export default function Reports() {
                       <tr>
 
                         <td
-                          colSpan="9"
+                          colSpan="11"
                           className="px-5 py-10 text-center text-gray-500"
                         >
                           Memuat laporan stok...
@@ -994,7 +1325,7 @@ export default function Reports() {
                       <tr>
 
                         <td
-                          colSpan="9"
+                          colSpan="11"
                           className="px-5 py-10 text-center text-gray-500"
                         >
                           Tidak ada data stok.
@@ -1035,6 +1366,14 @@ export default function Reports() {
                                   </p>
                                 )}
 
+                              </td>
+
+                              <td className="px-5 py-4 text-gray-600">
+                                {product.brand || '-'}
+                              </td>
+
+                              <td className="px-5 py-4 text-gray-600">
+                                {product.size || '-'}
                               </td>
 
                               <td className="px-5 py-4 text-gray-600">
@@ -1110,6 +1449,262 @@ export default function Reports() {
                                   </span>
 
                                 )}
+
+                              </td>
+
+                            </tr>
+                          )
+                        }
+                      )
+
+                    )}
+
+                  </tbody>
+
+                </table>
+
+              </div>
+
+            </div>
+
+            {/* Stock Movement Table */}
+
+            <div className="overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm">
+
+              <div className="border-b border-gray-200 p-5">
+
+                <h2 className="font-bold text-gray-900">
+                  Riwayat Pergerakan Stok
+                </h2>
+
+                <p className="mt-1 text-sm text-gray-500">
+                  Riwayat barang masuk dan barang keluar.
+                </p>
+
+              </div>
+
+              <div className="overflow-x-auto">
+
+                <table className="w-full min-w-[1200px] text-sm">
+
+                  <thead className="bg-gray-50">
+
+                    <tr>
+
+                      <th className="px-5 py-4 text-left">
+                        No
+                      </th>
+
+                      <th className="px-5 py-4 text-left">
+                        Tanggal
+                      </th>
+
+                      <th className="px-5 py-4 text-left">
+                        Barang
+                      </th>
+
+                      <th className="px-5 py-4 text-left">
+                        Merek
+                      </th>
+
+                      <th className="px-5 py-4 text-left">
+                        Ukuran
+                      </th>
+
+                      <th className="px-5 py-4 text-center">
+                        Jenis
+                      </th>
+
+                      <th className="px-5 py-4 text-right">
+                        Jumlah
+                      </th>
+
+                      <th className="px-5 py-4 text-center">
+                        Satuan
+                      </th>
+
+                      <th className="px-5 py-4 text-left">
+                        Petugas
+                      </th>
+
+                      <th className="px-5 py-4 text-left">
+                        Keterangan
+                      </th>
+
+                    </tr>
+
+                  </thead>
+
+                  <tbody className="divide-y divide-gray-100">
+
+                    {stockLoading ? (
+
+                      <tr>
+
+                        <td
+                          colSpan="10"
+                          className="px-5 py-10 text-center text-gray-500"
+                        >
+                          Memuat riwayat stok...
+                        </td>
+
+                      </tr>
+
+                    ) : movements.length === 0 ? (
+
+                      <tr>
+
+                        <td
+                          colSpan="10"
+                          className="px-5 py-10 text-center"
+                        >
+
+                          <div className="flex flex-col items-center justify-center">
+
+                            <RotateCcw
+                              size={32}
+                              className="mb-2 text-gray-300"
+                            />
+
+                            <p className="font-medium text-gray-500">
+                              Belum ada pergerakan stok
+                            </p>
+
+                            <p className="mt-1 text-sm text-gray-400">
+                              Barang masuk dan barang keluar akan muncul di sini.
+                            </p>
+
+                          </div>
+
+                        </td>
+
+                      </tr>
+
+                    ) : (
+
+                      movements.map(
+                        (movement, index) => {
+
+                          const product =
+                            movement.product || {}
+
+                          const unit =
+                            product.base_unit || {}
+
+                          const isIncoming =
+                            movement.type === 'in'
+
+                          return (
+                            <tr
+                              key={
+                                movement.id ||
+                                index
+                              }
+                              className="hover:bg-gray-50"
+                            >
+
+                              <td className="px-5 py-4 text-gray-500">
+                                {index + 1}
+                              </td>
+
+                              <td className="px-5 py-4 whitespace-nowrap text-gray-600">
+                                {formatDateTime(
+                                  movement.date
+                                )}
+                              </td>
+
+                              <td className="px-5 py-4">
+
+                                <p className="font-semibold text-gray-900">
+                                  {product.name ||
+                                    '-'}
+                                </p>
+
+                                {product.barcode && (
+                                  <p className="mt-1 text-xs text-gray-400">
+                                    {product.barcode}
+                                  </p>
+                                )}
+
+                              </td>
+
+                              <td className="px-5 py-4 text-gray-600">
+                                {product.brand ||
+                                  '-'}
+                              </td>
+
+                              <td className="px-5 py-4 text-gray-600">
+                                {product.size ||
+                                  '-'}
+                              </td>
+
+                              <td className="px-5 py-4 text-center">
+
+                                {isIncoming ? (
+
+                                  <span className="inline-flex items-center gap-1.5 rounded-full bg-green-100 px-3 py-1 text-xs font-semibold text-green-700">
+
+                                    <ArrowDownToLine
+                                      size={14}
+                                    />
+
+                                    Barang Masuk
+
+                                  </span>
+
+                                ) : (
+
+                                  <span className="inline-flex items-center gap-1.5 rounded-full bg-red-100 px-3 py-1 text-xs font-semibold text-red-700">
+
+                                    <ArrowUpFromLine
+                                      size={14}
+                                    />
+
+                                    Barang Keluar
+
+                                  </span>
+
+                                )}
+
+                              </td>
+
+                              <td
+                                className={`px-5 py-4 text-right font-semibold ${
+                                  isIncoming
+                                    ? 'text-green-700'
+                                    : 'text-red-700'
+                                }`}
+                              >
+                                {isIncoming
+                                  ? '+'
+                                  : '-'}
+                                {formatQuantity(
+                                  Math.abs(
+                                    Number(
+                                      movement.quantity ||
+                                        0
+                                    )
+                                  )
+                                )}
+                              </td>
+
+                              <td className="px-5 py-4 text-center text-gray-600">
+
+                                {unit.name ||
+                                  unit.symbol ||
+                                  '-'}
+
+                              </td>
+
+                              <td className="px-5 py-4 text-gray-600">
+                                {movement.user?.name ||
+                                  '-'}
+                              </td>
+
+                              <td className="px-5 py-4 text-gray-600">
+
+                                {movement.note ||
+                                  '-'}
 
                               </td>
 

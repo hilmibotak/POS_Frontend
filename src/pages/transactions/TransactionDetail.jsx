@@ -212,7 +212,21 @@ function getTransactionChange(data, total, paid) {
 |--------------------------------------------------------------------------
 */
 
+function getProductId(item) {
+  return (
+    item?.product_id ??
+    item?.productId ??
+    item?.product?.id ??
+    item?.product?.product_id ??
+    null
+  )
+}
+
 function getProductName(item) {
+  if (typeof item?.product === 'string') {
+    return item.product
+  }
+
   return (
     item?.product?.name ??
     item?.product_name ??
@@ -221,6 +235,22 @@ function getProductName(item) {
     item?.product?.product_name ??
     item?.product?.productName ??
     '-'
+  )
+}
+
+function getProductBrand(item) {
+  return (
+    item?.product?.brand ??
+    item?.brand ??
+    ''
+  )
+}
+
+function getProductSize(item) {
+  return (
+    item?.product?.size ??
+    item?.size ??
+    ''
   )
 }
 
@@ -346,6 +376,110 @@ function formatDate(value) {
 
 /*
 |--------------------------------------------------------------------------
+| Ambil Data Produk Untuk Item Yang Belum Memiliki Nama
+|--------------------------------------------------------------------------
+*/
+
+async function enrichItemsWithProducts(items) {
+  if (!Array.isArray(items) || items.length === 0) {
+    return []
+  }
+
+  const productIds = [
+    ...new Set(
+      items
+        .map((item) => getProductId(item))
+        .filter(Boolean)
+    ),
+  ]
+
+  if (productIds.length === 0) {
+    return items
+  }
+
+  const productsById = {}
+
+  await Promise.all(
+    productIds.map(async (productId) => {
+      try {
+        const response = await api.get(
+          `/products/${productId}`
+        )
+
+        const responseData =
+          response.data?.data ??
+          response.data
+
+        const product =
+          responseData?.product ??
+          responseData
+
+        if (product?.id) {
+          productsById[product.id] =
+            product
+        } else {
+          productsById[productId] =
+            product
+        }
+
+      } catch (error) {
+        console.error(
+          `Gagal mengambil produk ${productId}:`,
+          error
+        )
+      }
+    })
+  )
+
+  return items.map((item) => {
+    const productId =
+      getProductId(item)
+
+    const existingName =
+      getProductName(item)
+
+    const product =
+      productsById[productId]
+
+    if (!product) {
+      return item
+    }
+
+    return {
+      ...item,
+
+      product: {
+        ...(item.product || {}),
+        ...product,
+      },
+
+      product_name:
+        existingName ||
+        product.name ||
+        product.product_name ||
+        '',
+
+      brand:
+        getProductBrand(item) ||
+        product.brand ||
+        '',
+
+      size:
+        getProductSize(item) ||
+        product.size ||
+        '',
+
+      unit:
+        item.unit ||
+        product.base_unit ||
+        product.unit ||
+        null,
+    }
+  })
+}
+
+/*
+|--------------------------------------------------------------------------
 | Component
 |--------------------------------------------------------------------------
 */
@@ -387,7 +521,20 @@ export default function TransactionDetail() {
         response.data?.data ||
         response.data
 
-      setTransaction(data)
+      const items =
+        getItems(data)
+
+      const enrichedItems =
+        await enrichItemsWithProducts(items)
+
+      const enrichedData = {
+        ...data,
+        items: enrichedItems,
+        details: enrichedItems,
+      }
+
+      setTransaction(enrichedData)
+
     } catch (err) {
       console.error(
         'DETAIL TRANSACTION ERROR:',
@@ -427,7 +574,20 @@ export default function TransactionDetail() {
         response.data?.data ||
         response.data
 
-      printReceipt(data)
+      const items =
+        getItems(data)
+
+      const enrichedItems =
+        await enrichItemsWithProducts(items)
+
+      const enrichedData = {
+        ...data,
+        items: enrichedItems,
+        details: enrichedItems,
+      }
+
+      printReceipt(enrichedData)
+
     } catch (err) {
       console.error(
         'REPRINT ERROR:',
@@ -455,20 +615,24 @@ export default function TransactionDetail() {
       JSON.stringify(data, null, 2)
     )
 
-    const items = getItems(data)
+    const items =
+      getItems(data)
 
-    const total = getTransactionTotal(
-      data,
-      items
-    )
+    const total =
+      getTransactionTotal(
+        data,
+        items
+      )
 
-    const paid = getTransactionPaid(data)
+    const paid =
+      getTransactionPaid(data)
 
-    const change = getTransactionChange(
-      data,
-      total,
-      paid
-    )
+    const change =
+      getTransactionChange(
+        data,
+        total,
+        paid
+      )
 
     const transactionNumber =
       getTransactionNumber(data)
@@ -492,11 +656,12 @@ export default function TransactionDetail() {
       }
     )
 
-    const receiptWindow = window.open(
-      '',
-      '_blank',
-      'width=400,height=700'
-    )
+    const receiptWindow =
+      window.open(
+        '',
+        '_blank',
+        'width=400,height=700'
+      )
 
     if (!receiptWindow) {
       setError(
@@ -506,46 +671,68 @@ export default function TransactionDetail() {
       return
     }
 
-    const itemsHtml = items
-      .map((item) => {
-        const productName =
-          getProductName(item)
+    const itemsHtml =
+      items
+        .map((item) => {
+          const productName =
+            getProductName(item) ||
+            'Produk'
 
-        const unitName =
-          getUnitName(item)
+          const brand =
+            getProductBrand(item)
 
-        const quantity =
-          getItemQuantity(item)
+          const size =
+            getProductSize(item)
 
-        const price =
-          getItemPrice(item)
+          const unitName =
+            getUnitName(item)
 
-        const subtotal =
-          getItemSubtotal(item)
+          const quantity =
+            getItemQuantity(item)
 
-        return `
-          <tr>
-            <td colspan="3">
-              ${productName}
-            </td>
-          </tr>
+          const price =
+            getItemPrice(item)
 
-          <tr>
-            <td>
-              ${formatQuantity(quantity)} ${unitName}
-            </td>
+          const subtotal =
+            getItemSubtotal(item)
 
-            <td>
-              ${formatRupiah(price)}
-            </td>
+          let productDescription =
+            productName
 
-            <td style="text-align:right">
-              ${formatRupiah(subtotal)}
-            </td>
-          </tr>
-        `
-      })
-      .join('')
+          if (brand) {
+            productDescription +=
+              ` - ${brand}`
+          }
+
+          if (size) {
+            productDescription +=
+              ` (${size})`
+          }
+
+          return `
+            <tr>
+              <td colspan="3" class="product-name">
+                ${productDescription}
+              </td>
+            </tr>
+
+            <tr>
+              <td>
+                ${formatQuantity(quantity)}
+                ${unitName}
+              </td>
+
+              <td>
+                ${formatRupiah(price)}
+              </td>
+
+              <td style="text-align:right">
+                ${formatRupiah(subtotal)}
+              </td>
+            </tr>
+          `
+        })
+        .join('')
 
     receiptWindow.document.write(`
       <!DOCTYPE html>
@@ -595,6 +782,12 @@ export default function TransactionDetail() {
             td {
               padding: 3px 0;
               vertical-align: top;
+            }
+
+            .product-name {
+              font-weight: bold;
+              padding-top: 5px;
+              padding-bottom: 1px;
             }
 
             .total td {
@@ -763,7 +956,8 @@ export default function TransactionDetail() {
   |--------------------------------------------------------------------------
   */
 
-  const items = getItems(transaction)
+  const items =
+    getItems(transaction)
 
   const total =
     getTransactionTotal(
@@ -772,7 +966,9 @@ export default function TransactionDetail() {
     )
 
   const paid =
-    getTransactionPaid(transaction)
+    getTransactionPaid(
+      transaction
+    )
 
   const change =
     getTransactionChange(
@@ -782,19 +978,27 @@ export default function TransactionDetail() {
     )
 
   const transactionNumber =
-    getTransactionNumber(transaction)
+    getTransactionNumber(
+      transaction
+    )
 
   const transactionDate =
-    getTransactionDate(transaction)
+    getTransactionDate(
+      transaction
+    )
 
   const cashierName =
-    getCashierName(transaction)
+    getCashierName(
+      transaction
+    )
 
   const customer =
     getCustomer(transaction)
 
   const status =
-    getTransactionStatus(transaction)
+    getTransactionStatus(
+      transaction
+    )
 
   /*
   |--------------------------------------------------------------------------
@@ -877,7 +1081,9 @@ export default function TransactionDetail() {
             </p>
 
             <p className="mt-2 font-semibold text-gray-900">
-              {formatDate(transactionDate)}
+              {formatDate(
+                transactionDate
+              )}
             </p>
 
           </div>
@@ -990,53 +1196,92 @@ export default function TransactionDetail() {
 
                 ) : (
 
-                  items.map((item, index) => {
+                  items.map(
+                    (item, index) => {
 
-                    const name =
-                      getProductName(item)
+                      const name =
+                        getProductName(item) ||
+                        'Produk'
 
-                    const unit =
-                      getUnitName(item)
+                      const brand =
+                        getProductBrand(item)
 
-                    const qty =
-                      getItemQuantity(item)
+                      const size =
+                        getProductSize(item)
 
-                    const price =
-                      getItemPrice(item)
+                      const unit =
+                        getUnitName(item)
 
-                    const subtotal =
-                      getItemSubtotal(item)
+                      const qty =
+                        getItemQuantity(item)
 
-                    return (
-                      <tr
-                        key={
-                          item.id ||
-                          index
-                        }
-                      >
+                      const price =
+                        getItemPrice(item)
 
-                        <td className="px-5 py-4 font-medium text-gray-900">
-                          {name}
-                        </td>
+                      const subtotal =
+                        getItemSubtotal(item)
 
-                        <td className="px-5 py-4 text-center text-gray-600">
-                          {formatQuantity(qty)}{' '}
-                          {unit}
-                        </td>
+                      return (
+                        <tr
+                          key={
+                            item.id ||
+                            index
+                          }
+                        >
 
-                        <td className="px-5 py-4 text-right text-gray-600">
-                          {formatRupiah(price)}
-                        </td>
+                          <td className="px-5 py-4">
 
-                        <td className="px-5 py-4 text-right font-semibold text-gray-900">
-                          {formatRupiah(
-                            subtotal
-                          )}
-                        </td>
+                            <p className="font-medium text-gray-900">
+                              {name}
+                            </p>
 
-                      </tr>
-                    )
-                  })
+                            {(brand || size) && (
+                              <p className="mt-1 text-xs text-gray-500">
+
+                                {brand && (
+                                  <>
+                                    {brand}
+                                  </>
+                                )}
+
+                                {brand && size && (
+                                  <span className="mx-1">
+                                    •
+                                  </span>
+                                )}
+
+                                {size && (
+                                  <>
+                                    {size}
+                                  </>
+                                )}
+
+                              </p>
+                            )}
+
+                          </td>
+
+                          <td className="px-5 py-4 text-center text-gray-600">
+                            {formatQuantity(qty)}{' '}
+                            {unit}
+                          </td>
+
+                          <td className="px-5 py-4 text-right text-gray-600">
+                            {formatRupiah(
+                              price
+                            )}
+                          </td>
+
+                          <td className="px-5 py-4 text-right font-semibold text-gray-900">
+                            {formatRupiah(
+                              subtotal
+                            )}
+                          </td>
+
+                        </tr>
+                      )
+                    }
+                  )
 
                 )}
 
