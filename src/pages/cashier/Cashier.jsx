@@ -1,8 +1,11 @@
 import { useEffect, useMemo, useState } from 'react'
 import {
+  Banknote,
   Check,
+  CreditCard,
   Minus,
   Plus,
+  QrCode,
   Search,
   ShoppingCart,
   Trash2,
@@ -84,6 +87,7 @@ export default function Cashier() {
   const [loadingUnits, setLoadingUnits] = useState(false)
 
   // Pembayaran
+  const [paymentMethod, setPaymentMethod] = useState('cash')
   const [paid, setPaid] = useState('')
   const [loadingTransaction, setLoadingTransaction] = useState(false)
 
@@ -160,8 +164,28 @@ export default function Cashier() {
     }, 0)
   }, [cart])
 
-  const paidAmount = Number(paid) || 0
-  const change = paidAmount - total
+  /*
+  |--------------------------------------------------------------------------
+  | Nilai pembayaran
+  |--------------------------------------------------------------------------
+  |
+  | Untuk transfer dan QRIS, pembayaran otomatis dianggap sesuai total.
+  | Untuk tunai, menggunakan nilai dari input paid.
+  |
+  */
+  const paidAmount =
+    paymentMethod === 'cash'
+      ? Number(paid) || 0
+      : total
+
+  const change =
+    paymentMethod === 'cash'
+      ? Math.max(paidAmount - total, 0)
+      : 0
+
+  const isPaymentValid =
+    cart.length > 0 &&
+    paidAmount >= total
 
   const openProductModal = async (product) => {
     setSelectedProduct(product)
@@ -291,7 +315,8 @@ export default function Cashier() {
      * Contoh:
      * 0.5 Kolbak × 500 Buah = 250 Buah
      */
-    const baseQuantity = qty * conversionRate
+    const baseQuantity =
+      qty * conversionRate
 
     if (
       selectedProduct.stock !== undefined &&
@@ -308,17 +333,25 @@ export default function Cashier() {
     const cartItem = {
       product_id: selectedProduct.id,
       product: selectedProduct,
+
       unit_id:
         selectedUnit?.unit_id ||
         selectedProduct.base_unit_id,
+
       unit:
         selectedUnit?.unit ||
         selectedProduct.base_unit,
+
       unit_name: unitName,
+
       quantity: qty,
+
       base_quantity: baseQuantity,
+
       conversion_rate: conversionRate,
+
       price: unitPrice,
+
       subtotal,
     }
 
@@ -339,7 +372,8 @@ export default function Cashier() {
 
       const updatedCart = [...prevCart]
 
-      const existingItem = updatedCart[existingIndex]
+      const existingItem =
+        updatedCart[existingIndex]
 
       const newQuantity =
         Number(existingItem.quantity) +
@@ -363,9 +397,14 @@ export default function Cashier() {
 
       updatedCart[existingIndex] = {
         ...existingItem,
+
         quantity: newQuantity,
-        base_quantity: newBaseQuantity,
-        subtotal: newQuantity * unitPrice,
+
+        base_quantity:
+          newBaseQuantity,
+
+        subtotal:
+          newQuantity * unitPrice,
       }
 
       return updatedCart
@@ -374,7 +413,10 @@ export default function Cashier() {
     closeProductModal()
   }
 
-  const updateCartQuantity = (index, newQuantity) => {
+  const updateCartQuantity = (
+    index,
+    newQuantity
+  ) => {
     const qty = Number(newQuantity)
 
     if (!qty || qty <= 0) {
@@ -383,14 +425,19 @@ export default function Cashier() {
 
     setCart((prevCart) => {
       const updatedCart = [...prevCart]
+
       const item = updatedCart[index]
 
       const baseQuantity =
-        qty * Number(item.conversion_rate || 1)
+        qty *
+        Number(
+          item.conversion_rate || 1
+        )
 
       if (
         item.product?.stock !== undefined &&
-        baseQuantity > Number(item.product.stock)
+        baseQuantity >
+          Number(item.product.stock)
       ) {
         setError(
           `Stok ${getProductDisplayName(
@@ -403,9 +450,14 @@ export default function Cashier() {
 
       updatedCart[index] = {
         ...item,
+
         quantity: qty,
-        base_quantity: baseQuantity,
-        subtotal: qty * Number(item.price),
+
+        base_quantity:
+          baseQuantity,
+
+        subtotal:
+          qty * Number(item.price),
       }
 
       return updatedCart
@@ -414,16 +466,55 @@ export default function Cashier() {
 
   const removeFromCart = (index) => {
     setCart((prevCart) =>
-      prevCart.filter((_, itemIndex) => itemIndex !== index)
+      prevCart.filter(
+        (_, itemIndex) =>
+          itemIndex !== index
+      )
     )
   }
 
   const clearCart = () => {
     setCart([])
     setPaid('')
+    setPaymentMethod('cash')
     setError('')
   }
 
+  /*
+  |--------------------------------------------------------------------------
+  | Ganti metode pembayaran
+  |--------------------------------------------------------------------------
+  */
+  const handlePaymentMethodChange = (
+    method
+  ) => {
+    setPaymentMethod(method)
+    setError('')
+
+    /*
+     * Untuk non-tunai tidak perlu input nominal
+     * karena pembayaran dianggap sesuai total.
+     */
+    if (method !== 'cash') {
+      setPaid('')
+    }
+  }
+
+  /*
+  |--------------------------------------------------------------------------
+  | Nominal pembayaran cepat
+  |--------------------------------------------------------------------------
+  */
+  const setQuickPayment = (amount) => {
+    setPaid(String(amount))
+    setError('')
+  }
+
+  /*
+  |--------------------------------------------------------------------------
+  | Proses transaksi
+  |--------------------------------------------------------------------------
+  */
   const handleSubmit = async () => {
     setError('')
 
@@ -432,9 +523,20 @@ export default function Cashier() {
       return
     }
 
-    if (paidAmount < total) {
-      setError('Jumlah pembayaran masih kurang.')
-      return
+    if (paymentMethod === 'cash') {
+      if (paidAmount < total) {
+        setError(
+          'Jumlah pembayaran masih kurang.'
+        )
+        return
+      }
+    } else {
+      if (total <= 0) {
+        setError(
+          'Total transaksi harus lebih dari 0.'
+        )
+        return
+      }
     }
 
     try {
@@ -445,12 +547,20 @@ export default function Cashier() {
           ? Number(selectedCustomer)
           : null,
 
+        payment_method:
+          paymentMethod,
+
         paid: paidAmount,
 
         items: cart.map((item) => ({
-          product_id: Number(item.product_id),
-          unit_id: Number(item.unit_id),
-          quantity: Number(item.quantity),
+          product_id:
+            Number(item.product_id),
+
+          unit_id:
+            Number(item.unit_id),
+
+          quantity:
+            Number(item.quantity),
         })),
       }
 
@@ -459,10 +569,11 @@ export default function Cashier() {
         payload
       )
 
-      const response = await api.post(
-        '/transactions',
-        payload
-      )
+      const response =
+        await api.post(
+          '/transactions',
+          payload
+        )
 
       console.log(
         'TRANSACTION SUCCESS:',
@@ -476,11 +587,14 @@ export default function Cashier() {
       setCart([])
       setPaid('')
       setSelectedCustomer('')
+      setPaymentMethod('cash')
 
       await fetchProducts()
 
       if (transaction?.id) {
-        navigate(`/transactions/${transaction.id}`)
+        navigate(
+          `/transactions/${transaction.id}`
+        )
       } else {
         setError(
           'Transaksi berhasil disimpan, tetapi ID transaksi tidak ditemukan.'
@@ -492,27 +606,32 @@ export default function Cashier() {
         err.response?.data || err
       )
 
-      if (err.response?.status === 422) {
+      if (
+        err.response?.status === 422
+      ) {
         const validationErrors =
           err.response?.data?.errors
 
         if (validationErrors) {
-          const messages = Object.values(
-            validationErrors
-          )
-            .flat()
-            .join(' ')
+          const messages =
+            Object.values(
+              validationErrors
+            )
+              .flat()
+              .join(' ')
 
           setError(messages)
         } else {
           setError(
-            err.response?.data?.message ||
+            err.response?.data
+              ?.message ||
               'Data transaksi tidak valid.'
           )
         }
       } else {
         setError(
-          err.response?.data?.message ||
+          err.response?.data
+            ?.message ||
             'Gagal menyimpan transaksi.'
         )
       }
@@ -524,6 +643,7 @@ export default function Cashier() {
   return (
     <DashboardLayout>
       <div className="space-y-6">
+
         {/* Header */}
         <div>
           <h1 className="text-2xl font-bold text-gray-900">
@@ -553,10 +673,15 @@ export default function Cashier() {
         )}
 
         <div className="grid grid-cols-1 gap-6 xl:grid-cols-3">
-          {/* LEFT */}
+
+          {/* =========================================================
+              LEFT
+          ========================================================== */}
           <div className="space-y-6 xl:col-span-2">
+
             {/* Customer */}
             <div className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
+
               <label className="mb-2 block text-sm font-semibold text-gray-700">
                 Pelanggan
               </label>
@@ -564,7 +689,9 @@ export default function Cashier() {
               <select
                 value={selectedCustomer}
                 onChange={(e) =>
-                  setSelectedCustomer(e.target.value)
+                  setSelectedCustomer(
+                    e.target.value
+                  )
                 }
                 className="w-full rounded-xl border border-gray-300 px-4 py-3 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
               >
@@ -576,7 +703,8 @@ export default function Cashier() {
                   customers
                     .filter(
                       (customer) =>
-                        customer.is_active !== false
+                        customer.is_active !==
+                        false
                     )
                     .map((customer) => (
                       <option
@@ -594,6 +722,7 @@ export default function Cashier() {
 
             {/* Products */}
             <div className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
+
               <div className="mb-5">
                 <h2 className="text-lg font-bold text-gray-900">
                   Pilih Barang
@@ -606,6 +735,7 @@ export default function Cashier() {
 
               {/* Search */}
               <div className="relative mb-5">
+
                 <input
                   type="text"
                   value={search}
@@ -629,6 +759,7 @@ export default function Cashier() {
                 </div>
               ) : filteredProducts.length === 0 ? (
                 <div className="rounded-xl border border-dashed border-gray-300 py-10 text-center">
+
                   <p className="font-medium text-gray-700">
                     Barang tidak ditemukan
                   </p>
@@ -636,28 +767,40 @@ export default function Cashier() {
                   <p className="mt-1 text-sm text-gray-500">
                     Coba gunakan kata pencarian lain.
                   </p>
+
                 </div>
               ) : (
                 <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+
                   {filteredProducts
                     .filter(
                       (product) =>
-                        product.is_active !== false
+                        product.is_active !==
+                        false
                     )
                     .map((product) => (
                       <div
                         key={product.id}
                         className="rounded-xl border border-gray-200 p-4 transition hover:border-blue-300 hover:shadow-sm"
                       >
+
                         <div className="flex items-start justify-between gap-3">
+
                           <div className="min-w-0">
+
                             <h3 className="truncate font-semibold text-gray-900">
-                              {getProductDisplayName(product)}
+                              {getProductDisplayName(
+                                product
+                              )}
                             </h3>
 
-                            {getProductSize(product) ? (
+                            {getProductSize(
+                              product
+                            ) ? (
                               <p className="mt-1 text-sm font-medium text-gray-600">
-                                {getProductSize(product)}
+                                {getProductSize(
+                                  product
+                                )}
                               </p>
                             ) : null}
 
@@ -666,14 +809,19 @@ export default function Cashier() {
                                 ? `Barcode: ${product.barcode}`
                                 : 'Tanpa barcode'}
                             </p>
+
                           </div>
 
                           <span className="shrink-0 rounded-lg bg-blue-50 px-2 py-1 text-xs font-semibold text-blue-600">
-                            {getBaseUnitName(product)}
+                            {getBaseUnitName(
+                              product
+                            )}
                           </span>
+
                         </div>
 
                         <div className="mt-4 grid grid-cols-2 gap-3">
+
                           <div>
                             <p className="text-xs text-gray-500">
                               Harga
@@ -693,7 +841,9 @@ export default function Cashier() {
 
                             <p
                               className={`mt-1 font-bold ${
-                                Number(product.stock) <=
+                                Number(
+                                  product.stock
+                                ) <=
                                 Number(
                                   product.minimum_stock ||
                                     product.min_stock ||
@@ -703,34 +853,55 @@ export default function Cashier() {
                                   : 'text-gray-900'
                               }`}
                             >
-                              {formatStock(product.stock)}{' '}
-                              {getBaseUnitName(product)}
+                              {formatStock(
+                                product.stock
+                              )}{' '}
+                              {getBaseUnitName(
+                                product
+                              )}
                             </p>
                           </div>
+
                         </div>
 
                         <button
                           type="button"
                           onClick={() =>
-                            openProductModal(product)
+                            openProductModal(
+                              product
+                            )
                           }
-                          title={`Tambah ${getProductDisplayName(product)} ke keranjang`}
-                          aria-label={`Tambah ${getProductDisplayName(product)} ke keranjang`}
+                          title={`Tambah ${getProductDisplayName(
+                            product
+                          )} ke keranjang`}
+                          aria-label={`Tambah ${getProductDisplayName(
+                            product
+                          )} ke keranjang`}
                           className="mt-4 flex w-full items-center justify-center rounded-xl bg-blue-600 px-4 py-2.5 text-white transition hover:bg-blue-700"
                         >
-                          <ShoppingCart size={20} />
+                          <ShoppingCart
+                            size={20}
+                          />
                         </button>
+
                       </div>
                     ))}
+
                 </div>
               )}
             </div>
           </div>
 
-          {/* RIGHT - CART */}
+          {/* =========================================================
+              RIGHT - CART
+          ========================================================== */}
           <div className="xl:col-span-1">
+
             <div className="sticky top-6 rounded-2xl border border-gray-200 bg-white shadow-sm">
+
+              {/* Cart Header */}
               <div className="flex items-center justify-between border-b border-gray-200 p-5">
+
                 <div>
                   <h2 className="text-lg font-bold text-gray-900">
                     Keranjang
@@ -752,11 +923,15 @@ export default function Cashier() {
                     <Trash2 size={18} />
                   </button>
                 )}
+
               </div>
 
+              {/* Cart Items */}
               <div className="max-h-[430px] space-y-4 overflow-y-auto p-5">
+
                 {cart.length === 0 ? (
                   <div className="py-12 text-center">
+
                     <ShoppingCart
                       size={42}
                       className="mx-auto text-gray-300"
@@ -769,6 +944,7 @@ export default function Cashier() {
                     <p className="mt-1 text-sm text-gray-500">
                       Tambahkan barang untuk membuat transaksi.
                     </p>
+
                   </div>
                 ) : (
                   cart.map((item, index) => (
@@ -776,22 +952,34 @@ export default function Cashier() {
                       key={`${item.product_id}-${item.unit_id}-${index}`}
                       className="rounded-xl border border-gray-200 p-4"
                     >
+
                       <div className="flex items-start justify-between gap-3">
+
                         <div className="min-w-0">
+
                           <h3 className="font-semibold text-gray-900">
-                            {getProductDisplayName(item.product)}
+                            {getProductDisplayName(
+                              item.product
+                            )}
                           </h3>
 
-                          {getProductSize(item.product) ? (
+                          {getProductSize(
+                            item.product
+                          ) ? (
                             <p className="mt-1 text-xs font-medium text-gray-600">
-                              {getProductSize(item.product)}
+                              {getProductSize(
+                                item.product
+                              )}
                             </p>
                           ) : null}
 
                           <p className="mt-1 text-xs text-gray-500">
-                            {formatRupiah(item.price)} /{' '}
-                            {item.unit_name}
+                            {formatRupiah(
+                              item.price
+                            )}{' '}
+                            / {item.unit_name}
                           </p>
+
                         </div>
 
                         <button
@@ -805,16 +993,21 @@ export default function Cashier() {
                         >
                           <Trash2 size={17} />
                         </button>
+
                       </div>
 
                       <div className="mt-3 flex items-center justify-between gap-3">
+
                         <div className="flex items-center rounded-lg border border-gray-300">
+
                           <button
                             type="button"
                             onClick={() =>
                               updateCartQuantity(
                                 index,
-                                Number(item.quantity) - 1
+                                Number(
+                                  item.quantity
+                                ) - 1
                               )
                             }
                             title="Kurangi jumlah"
@@ -843,7 +1036,9 @@ export default function Cashier() {
                             onClick={() =>
                               updateCartQuantity(
                                 index,
-                                Number(item.quantity) + 1
+                                Number(
+                                  item.quantity
+                                ) + 1
                               )
                             }
                             title="Tambah jumlah"
@@ -852,20 +1047,31 @@ export default function Cashier() {
                           >
                             <Plus size={16} />
                           </button>
+
                         </div>
 
                         <p className="font-bold text-gray-900">
-                          {formatRupiah(item.subtotal)}
+                          {formatRupiah(
+                            item.subtotal
+                          )}
                         </p>
+
                       </div>
+
                     </div>
                   ))
                 )}
+
               </div>
 
-              {/* Summary */}
+              {/* =====================================================
+                  PAYMENT SUMMARY
+              ====================================================== */}
               <div className="border-t border-gray-200 p-5">
+
+                {/* Total */}
                 <div className="flex items-center justify-between">
+
                   <span className="text-sm text-gray-500">
                     Total
                   </span>
@@ -873,49 +1079,256 @@ export default function Cashier() {
                   <span className="text-xl font-bold text-gray-900">
                     {formatRupiah(total)}
                   </span>
+
                 </div>
 
+                {/* Payment Method */}
                 <div className="mt-5">
+
                   <label className="mb-2 block text-sm font-semibold text-gray-700">
-                    Uang Dibayar
+                    Metode Pembayaran
                   </label>
 
-                  <input
-                    type="number"
-                    min="0"
-                    value={paid}
-                    onChange={(e) =>
-                      setPaid(e.target.value)
-                    }
-                    placeholder="Masukkan jumlah pembayaran"
-                    className="w-full rounded-xl border border-gray-300 px-4 py-3 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
-                  />
+                  <div className="grid grid-cols-3 gap-2">
+
+                    {/* Cash */}
+                    <button
+                      type="button"
+                      onClick={() =>
+                        handlePaymentMethodChange(
+                          'cash'
+                        )
+                      }
+                      title="Pembayaran Tunai"
+                      aria-label="Pembayaran Tunai"
+                      className={`flex flex-col items-center justify-center gap-1.5 rounded-xl border px-2 py-3 text-xs font-semibold transition ${
+                        paymentMethod ===
+                        'cash'
+                          ? 'border-blue-500 bg-blue-50 text-blue-600'
+                          : 'border-gray-200 bg-white text-gray-600 hover:border-gray-300 hover:bg-gray-50'
+                      }`}
+                    >
+                      <Banknote size={20} />
+
+                      <span>Tunai</span>
+
+                    </button>
+
+                    {/* Transfer */}
+                    <button
+                      type="button"
+                      onClick={() =>
+                        handlePaymentMethodChange(
+                          'transfer'
+                        )
+                      }
+                      title="Pembayaran Transfer"
+                      aria-label="Pembayaran Transfer"
+                      className={`flex flex-col items-center justify-center gap-1.5 rounded-xl border px-2 py-3 text-xs font-semibold transition ${
+                        paymentMethod ===
+                        'transfer'
+                          ? 'border-blue-500 bg-blue-50 text-blue-600'
+                          : 'border-gray-200 bg-white text-gray-600 hover:border-gray-300 hover:bg-gray-50'
+                      }`}
+                    >
+                      <CreditCard size={20} />
+
+                      <span>Transfer</span>
+
+                    </button>
+
+                    {/* QRIS */}
+                    <button
+                      type="button"
+                      onClick={() =>
+                        handlePaymentMethodChange(
+                          'qris'
+                        )
+                      }
+                      title="Pembayaran QRIS"
+                      aria-label="Pembayaran QRIS"
+                      className={`flex flex-col items-center justify-center gap-1.5 rounded-xl border px-2 py-3 text-xs font-semibold transition ${
+                        paymentMethod ===
+                        'qris'
+                          ? 'border-blue-500 bg-blue-50 text-blue-600'
+                          : 'border-gray-200 bg-white text-gray-600 hover:border-gray-300 hover:bg-gray-50'
+                      }`}
+                    >
+                      <QrCode size={20} />
+
+                      <span>QRIS</span>
+
+                    </button>
+
+                  </div>
+
                 </div>
 
-                <div className="mt-4 flex items-center justify-between">
-                  <span className="text-sm text-gray-500">
-                    Kembalian
-                  </span>
+                {/* Cash Payment */}
+                {paymentMethod === 'cash' && (
+                  <div className="mt-5">
 
-                  <span
-                    className={`font-bold ${
-                      change < 0
-                        ? 'text-red-600'
-                        : 'text-green-600'
-                    }`}
-                  >
-                    {formatRupiah(
-                      change > 0 ? change : 0
+                    <label className="mb-2 block text-sm font-semibold text-gray-700">
+                      Uang Dibayar
+                    </label>
+
+                    <input
+                      type="number"
+                      min="0"
+                      value={paid}
+                      onChange={(e) =>
+                        setPaid(
+                          e.target.value
+                        )
+                      }
+                      placeholder="Masukkan jumlah pembayaran"
+                      className="w-full rounded-xl border border-gray-300 px-4 py-3 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+                    />
+
+                    {/* Quick payment */}
+                    {total > 0 && (
+                      <div className="mt-3">
+
+                        <p className="mb-2 text-xs text-gray-500">
+                          Nominal cepat
+                        </p>
+
+                        <div className="grid grid-cols-3 gap-2">
+
+                          <button
+                            type="button"
+                            onClick={() =>
+                              setQuickPayment(
+                                total
+                              )
+                            }
+                            title="Uang pas"
+                            className="rounded-lg border border-gray-200 px-2 py-2 text-xs font-semibold text-gray-600 transition hover:border-blue-300 hover:bg-blue-50 hover:text-blue-600"
+                          >
+                            Uang Pas
+                          </button>
+
+                          {[50000, 100000, 200000].map(
+                            (amount) => (
+                              <button
+                                key={amount}
+                                type="button"
+                                onClick={() =>
+                                  setQuickPayment(
+                                    amount
+                                  )
+                                }
+                                title={`Bayar ${formatRupiah(
+                                  amount
+                                )}`}
+                                className="rounded-lg border border-gray-200 px-2 py-2 text-xs font-semibold text-gray-600 transition hover:border-blue-300 hover:bg-blue-50 hover:text-blue-600"
+                              >
+                                {amount ===
+                                50000
+                                  ? '50 Rb'
+                                  : amount ===
+                                    100000
+                                  ? '100 Rb'
+                                  : '200 Rb'}
+                              </button>
+                            )
+                          )}
+
+                        </div>
+
+                      </div>
                     )}
-                  </span>
+
+                  </div>
+                )}
+
+                {/* Non Cash Info */}
+                {paymentMethod !== 'cash' && (
+                  <div className="mt-5 rounded-xl border border-blue-100 bg-blue-50 p-4">
+
+                    <div className="flex items-start gap-3">
+
+                      {paymentMethod ===
+                      'transfer' ? (
+                        <CreditCard
+                          size={20}
+                          className="mt-0.5 shrink-0 text-blue-600"
+                        />
+                      ) : (
+                        <QrCode
+                          size={20}
+                          className="mt-0.5 shrink-0 text-blue-600"
+                        />
+                      )}
+
+                      <div>
+
+                        <p className="text-sm font-semibold text-blue-700">
+                          Pembayaran{' '}
+                          {paymentMethod ===
+                          'transfer'
+                            ? 'Transfer'
+                            : 'QRIS'}
+                        </p>
+
+                        <p className="mt-1 text-xs leading-5 text-blue-600">
+                          Pembayaran akan dicatat
+                          sebesar total transaksi.
+                          Tidak ada kembalian.
+                        </p>
+
+                      </div>
+
+                    </div>
+
+                  </div>
+                )}
+
+                {/* Paid / Payment summary */}
+                <div className="mt-4 space-y-3">
+
+                  <div className="flex items-center justify-between">
+
+                    <span className="text-sm text-gray-500">
+                      Dibayar
+                    </span>
+
+                    <span className="font-semibold text-gray-900">
+                      {formatRupiah(
+                        paidAmount
+                      )}
+                    </span>
+
+                  </div>
+
+                  <div className="flex items-center justify-between">
+
+                    <span className="text-sm text-gray-500">
+                      Kembalian
+                    </span>
+
+                    <span
+                      className={`font-bold ${
+                        change < 0
+                          ? 'text-red-600'
+                          : 'text-green-600'
+                      }`}
+                    >
+                      {formatRupiah(
+                        change
+                      )}
+                    </span>
+
+                  </div>
+
                 </div>
 
+                {/* Process Transaction */}
                 <button
                   type="button"
                   disabled={
                     loadingTransaction ||
-                    cart.length === 0 ||
-                    paidAmount < total
+                    !isPaymentValid
                   }
                   onClick={handleSubmit}
                   title={
@@ -928,41 +1341,64 @@ export default function Cashier() {
                       ? 'Menyimpan transaksi'
                       : 'Simpan transaksi'
                   }
-                  className="mt-5 flex w-full items-center justify-center rounded-xl bg-blue-600 px-4 py-3 text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-gray-300"
+                  className="mt-5 flex w-full items-center justify-center gap-2 rounded-xl bg-blue-600 px-4 py-3 text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-gray-300"
                 >
                   {loadingTransaction ? (
-                    <span className="animate-pulse">
-                      <Check size={21} />
-                    </span>
+                    <>
+                      <span className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
+                      <span className="text-sm font-semibold">
+                        Memproses...
+                      </span>
+                    </>
                   ) : (
-                    <Check size={21} />
+                    <>
+                      <Check size={21} />
+                      <span className="text-sm font-semibold">
+                        Proses Transaksi
+                      </span>
+                    </>
                   )}
                 </button>
+
               </div>
             </div>
           </div>
         </div>
       </div>
 
-      {/* PRODUCT MODAL */}
+      {/* =============================================================
+          PRODUCT MODAL
+      ============================================================= */}
       {selectedProduct && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+
           <div className="w-full max-w-lg rounded-2xl bg-white shadow-xl">
+
+            {/* Modal Header */}
             <div className="flex items-center justify-between border-b border-gray-200 p-5">
+
               <div className="min-w-0">
+
                 <h2 className="text-lg font-bold text-gray-900">
                   Tambah Barang
                 </h2>
 
                 <p className="mt-1 font-medium text-gray-700">
-                  {getProductDisplayName(selectedProduct)}
+                  {getProductDisplayName(
+                    selectedProduct
+                  )}
                 </p>
 
-                {getProductSize(selectedProduct) ? (
+                {getProductSize(
+                  selectedProduct
+                ) ? (
                   <p className="mt-0.5 text-sm text-gray-500">
-                    {getProductSize(selectedProduct)}
+                    {getProductSize(
+                      selectedProduct
+                    )}
                   </p>
                 ) : null}
+
               </div>
 
               <button
@@ -974,24 +1410,36 @@ export default function Cashier() {
               >
                 <X size={21} />
               </button>
+
             </div>
 
             <div className="space-y-5 p-5">
+
+              {/* Stock */}
               <div className="rounded-xl bg-gray-50 p-4">
+
                 <div className="flex justify-between">
+
                   <span className="text-sm text-gray-500">
                     Stok tersedia
                   </span>
 
                   <span className="font-semibold text-gray-900">
-                    {formatStock(selectedProduct.stock)}{' '}
-                    {getBaseUnitName(selectedProduct)}
+                    {formatStock(
+                      selectedProduct.stock
+                    )}{' '}
+                    {getBaseUnitName(
+                      selectedProduct
+                    )}
                   </span>
+
                 </div>
+
               </div>
 
               {/* Unit */}
               <div>
+
                 <label className="mb-2 block text-sm font-semibold text-gray-700">
                   Satuan Penjualan
                 </label>
@@ -1002,53 +1450,77 @@ export default function Cashier() {
                   </div>
                 ) : (
                   <select
-                    value={selectedUnit?.id || 'base'}
+                    value={
+                      selectedUnit?.id ||
+                      'base'
+                    }
                     onChange={(e) => {
-                      const value = e.target.value
+                      const value =
+                        e.target.value
 
-                      if (value === 'base') {
-                        setSelectedUnit(null)
+                      if (
+                        value === 'base'
+                      ) {
+                        setSelectedUnit(
+                          null
+                        )
                         return
                       }
 
-                      const unit = productUnits.find(
-                        (item) =>
-                          String(item.id) === value
-                      )
+                      const unit =
+                        productUnits.find(
+                          (item) =>
+                            String(
+                              item.id
+                            ) === value
+                        )
 
-                      setSelectedUnit(unit || null)
+                      setSelectedUnit(
+                        unit || null
+                      )
                     }}
                     className="w-full rounded-xl border border-gray-300 px-4 py-3 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
                   >
+
                     <option value="base">
-                      {getBaseUnitName(selectedProduct)} —{' '}
+                      {getBaseUnitName(
+                        selectedProduct
+                      )}{' '}
+                      —{' '}
                       {formatRupiah(
-                        getBaseUnitPrice(selectedProduct)
+                        getBaseUnitPrice(
+                          selectedProduct
+                        )
                       )}
                     </option>
 
-                    {productUnits.map((item) => (
-                      <option
-                        key={item.id}
-                        value={item.id}
-                      >
-                        {item.unit?.name ||
-                          item.unit?.symbol ||
-                          'Unit'}{' '}
-                        —{' '}
-                        {formatRupiah(
-                          item.selling_price ||
-                            item.price ||
-                            0
-                        )}
-                      </option>
-                    ))}
+                    {productUnits.map(
+                      (item) => (
+                        <option
+                          key={item.id}
+                          value={item.id}
+                        >
+                          {item.unit?.name ||
+                            item.unit?.symbol ||
+                            'Unit'}{' '}
+                          —{' '}
+                          {formatRupiah(
+                            item.selling_price ||
+                              item.price ||
+                              0
+                          )}
+                        </option>
+                      )
+                    )}
+
                   </select>
                 )}
+
               </div>
 
               {/* Quantity */}
               <div>
+
                 <label className="mb-2 block text-sm font-semibold text-gray-700">
                   Jumlah
                 </label>
@@ -1059,17 +1531,23 @@ export default function Cashier() {
                   step="0.01"
                   value={quantity}
                   onChange={(e) =>
-                    setQuantity(e.target.value)
+                    setQuantity(
+                      e.target.value
+                    )
                   }
                   className="w-full rounded-xl border border-gray-300 px-4 py-3 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
                 />
+
               </div>
 
               {/* Price */}
               <div className="rounded-xl border border-blue-100 bg-blue-50 p-4">
+
                 <div className="flex justify-between text-sm">
+
                   <span className="text-gray-600">
-                    Harga / {getSelectedUnitName()}
+                    Harga /{' '}
+                    {getSelectedUnitName()}
                   </span>
 
                   <span className="font-semibold">
@@ -1077,33 +1555,46 @@ export default function Cashier() {
                       getSelectedUnitPrice()
                     )}
                   </span>
+
                 </div>
 
                 <div className="mt-2 flex justify-between">
+
                   <span className="font-semibold text-gray-700">
                     Subtotal
                   </span>
 
                   <span className="text-lg font-bold text-blue-600">
                     {formatRupiah(
-                      Number(quantity || 0) *
+                      Number(
+                        quantity || 0
+                      ) *
                         getSelectedUnitPrice()
                     )}
                   </span>
+
                 </div>
+
               </div>
 
               {/* Base quantity info */}
               {selectedUnit && (
                 <div className="text-xs text-gray-500">
-                  {quantity} {getSelectedUnitName()} ={' '}
-                  {Number(quantity || 0) *
+                  {quantity}{' '}
+                  {getSelectedUnitName()} ={' '}
+                  {Number(
+                    quantity || 0
+                  ) *
                     getConversionRate()}{' '}
-                  {getBaseUnitName(selectedProduct)}
+                  {getBaseUnitName(
+                    selectedProduct
+                  )}
                 </div>
               )}
 
+              {/* Modal Actions */}
               <div className="flex gap-3">
+
                 <button
                   type="button"
                   onClick={closeProductModal}
@@ -1121,9 +1612,13 @@ export default function Cashier() {
                   aria-label="Tambahkan ke keranjang"
                   className="flex flex-1 items-center justify-center rounded-xl bg-blue-600 px-4 py-3 text-white transition hover:bg-blue-700"
                 >
-                  <ShoppingCart size={20} />
+                  <ShoppingCart
+                    size={20}
+                  />
                 </button>
+
               </div>
+
             </div>
           </div>
         </div>

@@ -1,7 +1,19 @@
 import { useEffect, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
+import {
+  ArrowLeft,
+  CheckCircle2,
+  Clock3,
+  CreditCard,
+  Printer,
+  RefreshCw,
+  User,
+  UserRound,
+  XCircle,
+} from 'lucide-react'
 import DashboardLayout from '../../components/layout/DashboardLayout'
 import api from '../../services/api'
+import { useAuth } from '../../context/AuthContext'
 
 function formatRupiah(value) {
   return new Intl.NumberFormat('id-ID', {
@@ -22,337 +34,6 @@ function formatQuantity(value) {
     maximumFractionDigits: 3,
   })
 }
-
-/*
-|--------------------------------------------------------------------------
-| Helper Transaction
-|--------------------------------------------------------------------------
-*/
-
-function getTransactionNumber(data) {
-  return (
-    data?.transaction?.transaction_number ??
-    data?.transaction?.transaction_no ??
-    data?.transaction?.transaction_code ??
-    data?.transaction?.invoice_number ??
-    data?.transaction_number ??
-    data?.transaction_no ??
-    data?.transaction_code ??
-    data?.invoice_number ??
-    data?.invoice_no ??
-    data?.invoice ??
-    data?.code ??
-    data?.number ??
-    '-'
-  )
-}
-
-function getTransactionDate(data) {
-  return (
-    data?.transaction?.transaction_date ??
-    data?.transaction?.created_at ??
-    data?.transaction?.transaction_at ??
-    data?.transaction?.date ??
-    data?.created_at ??
-    data?.transaction_date ??
-    data?.transaction_at ??
-    data?.date ??
-    null
-  )
-}
-
-function getCashierName(data) {
-  return (
-    data?.transaction?.user?.name ??
-    data?.transaction?.cashier?.name ??
-    data?.transaction?.cashier_name ??
-    data?.transaction?.user_name ??
-    data?.user?.name ??
-    data?.cashier?.name ??
-    data?.cashier_name ??
-    data?.user_name ??
-    'Kasir'
-  )
-}
-
-function getCustomer(data) {
-  return (
-    data?.customer ??
-    data?.transaction?.customer ??
-    null
-  )
-}
-
-function getTransactionStatus(data) {
-  return (
-    data?.status ??
-    data?.transaction?.status ??
-    'Selesai'
-  )
-}
-
-function getItems(data) {
-  return (
-    data?.details ??
-    data?.items ??
-    data?.transaction_details ??
-    data?.transactionDetails ??
-    data?.details_transaction ??
-    data?.transaction?.details ??
-    data?.transaction?.items ??
-    data?.transaction?.transaction_details ??
-    data?.transaction?.transactionDetails ??
-    []
-  )
-}
-
-function getTransactionTotal(data, items = []) {
-  const value =
-    data?.total ??
-    data?.grand_total ??
-    data?.total_amount ??
-    data?.total_price ??
-    data?.amount ??
-    data?.grandTotal ??
-    data?.totalAmount ??
-    data?.transaction?.total ??
-    data?.transaction?.grand_total ??
-    data?.transaction?.total_amount ??
-    data?.transaction?.total_price ??
-    data?.transaction?.amount
-
-  if (
-    value !== null &&
-    value !== undefined &&
-    value !== ''
-  ) {
-    const number = Number(value)
-
-    if (!Number.isNaN(number) && number >= 0) {
-      return number
-    }
-  }
-
-  return items.reduce(
-    (sum, item) => sum + getItemSubtotal(item),
-    0
-  )
-}
-
-function getTransactionPaid(data) {
-  const value =
-    data?.summary?.paid ??
-    data?.summary?.payment ??
-    data?.summary?.paid_amount ??
-    data?.summary?.payment_amount ??
-    data?.summary?.amount_paid ??
-    data?.paid ??
-    data?.payment ??
-    data?.paid_amount ??
-    data?.payment_amount ??
-    data?.amount_paid ??
-    data?.amountPaid ??
-    data?.transaction?.paid ??
-    data?.transaction?.payment ??
-    data?.transaction?.paid_amount ??
-    data?.transaction?.payment_amount ??
-    data?.transaction?.amount_paid
-
-  if (
-    value !== null &&
-    value !== undefined &&
-    value !== ''
-  ) {
-    const number = Number(value)
-
-    if (!Number.isNaN(number)) {
-      return number
-    }
-  }
-
-  return 0
-}
-
-function getTransactionChange(data, total, paid) {
-  const value =
-    data?.summary?.change ??
-    data?.summary?.change_amount ??
-    data?.summary?.change_money ??
-    data?.summary?.changeAmount ??
-    data?.summary?.kembalian ??
-    data?.change ??
-    data?.change_amount ??
-    data?.change_money ??
-    data?.changeAmount ??
-    data?.kembalian ??
-    data?.transaction?.change ??
-    data?.transaction?.change_amount ??
-    data?.transaction?.change_money ??
-    data?.transaction?.changeAmount ??
-    data?.transaction?.kembalian
-
-  if (
-    value !== null &&
-    value !== undefined &&
-    value !== ''
-  ) {
-    const number = Number(value)
-
-    if (!Number.isNaN(number)) {
-      return number
-    }
-  }
-
-  return Math.max(paid - total, 0)
-}
-
-/*
-|--------------------------------------------------------------------------
-| Helper Item
-|--------------------------------------------------------------------------
-*/
-
-function getProductId(item) {
-  return (
-    item?.product_id ??
-    item?.productId ??
-    item?.product?.id ??
-    item?.product?.product_id ??
-    null
-  )
-}
-
-function getProductName(item) {
-  if (typeof item?.product === 'string') {
-    return item.product
-  }
-
-  return (
-    item?.product?.name ??
-    item?.product_name ??
-    item?.productName ??
-    item?.name ??
-    item?.product?.product_name ??
-    item?.product?.productName ??
-    '-'
-  )
-}
-
-function getProductBrand(item) {
-  return (
-    item?.product?.brand ??
-    item?.brand ??
-    ''
-  )
-}
-
-function getProductSize(item) {
-  return (
-    item?.product?.size ??
-    item?.size ??
-    ''
-  )
-}
-
-function getUnitName(item) {
-  return (
-    item?.unit?.name ??
-    item?.unit_name ??
-    item?.unitName ??
-    item?.unit?.symbol ??
-    item?.symbol ??
-    item?.product_unit?.unit?.name ??
-    item?.product_unit?.unit?.symbol ??
-    item?.productUnit?.unit?.name ??
-    item?.productUnit?.unit?.symbol ??
-    '-'
-  )
-}
-
-function getItemQuantity(item) {
-  return Number(
-    item?.quantity ??
-    item?.qty ??
-    item?.amount ??
-    0
-  )
-}
-
-function getItemPrice(item) {
-  const directPrice =
-    item?.unit_price ??
-    item?.price ??
-    item?.selling_price ??
-    item?.price_per_unit ??
-    item?.unitPrice ??
-    item?.sellingPrice ??
-    item?.pricePerUnit ??
-    item?.product_unit?.selling_price ??
-    item?.product_unit?.price ??
-    item?.productUnit?.selling_price ??
-    item?.productUnit?.price ??
-    item?.product?.selling_price ??
-    item?.product?.price
-
-  if (
-    directPrice !== null &&
-    directPrice !== undefined &&
-    directPrice !== ''
-  ) {
-    const number = Number(directPrice)
-
-    if (!Number.isNaN(number)) {
-      return number
-    }
-  }
-
-  const qty = getItemQuantity(item)
-
-  const subtotal = Number(
-    item?.subtotal ??
-    item?.total ??
-    item?.sub_total ??
-    item?.amount ??
-    0
-  )
-
-  if (qty > 0 && subtotal > 0) {
-    return subtotal / qty
-  }
-
-  return 0
-}
-
-function getItemSubtotal(item) {
-  const subtotal =
-    item?.subtotal ??
-    item?.sub_total ??
-    item?.total ??
-    item?.amount
-
-  if (
-    subtotal !== null &&
-    subtotal !== undefined &&
-    subtotal !== ''
-  ) {
-    const number = Number(subtotal)
-
-    if (!Number.isNaN(number)) {
-      return number
-    }
-  }
-
-  return (
-    getItemQuantity(item) *
-    getItemPrice(item)
-  )
-}
-
-/*
-|--------------------------------------------------------------------------
-| Helper Date
-|--------------------------------------------------------------------------
-*/
 
 function formatDate(value) {
   if (!value) {
@@ -376,106 +57,209 @@ function formatDate(value) {
 
 /*
 |--------------------------------------------------------------------------
-| Ambil Data Produk Untuk Item Yang Belum Memiliki Nama
+| Payment Method
 |--------------------------------------------------------------------------
 */
 
-async function enrichItemsWithProducts(items) {
-  if (!Array.isArray(items) || items.length === 0) {
-    return []
+function getPaymentMethodLabel(method) {
+  const methods = {
+    cash: 'Cash',
+    qris: 'QRIS',
+    transfer: 'Transfer',
   }
 
-  const productIds = [
-    ...new Set(
-      items
-        .map((item) => getProductId(item))
-        .filter(Boolean)
-    ),
-  ]
+  return methods[method] || method || '-'
+}
 
-  if (productIds.length === 0) {
-    return items
+function getPaymentMethodDescription(method) {
+  const descriptions = {
+    cash: 'Pembayaran tunai',
+    qris: 'Pembayaran melalui QRIS',
+    transfer: 'Pembayaran melalui transfer bank',
   }
 
-  const productsById = {}
+  return descriptions[method] || 'Metode pembayaran'
+}
 
-  await Promise.all(
-    productIds.map(async (productId) => {
-      try {
-        const response = await api.get(
-          `/products/${productId}`
-        )
+function getPaymentMethodIcon(method) {
+  if (method === 'cash') {
+    return '💵'
+  }
 
-        const responseData =
-          response.data?.data ??
-          response.data
+  if (method === 'qris') {
+    return '📱'
+  }
 
-        const product =
-          responseData?.product ??
-          responseData
+  if (method === 'transfer') {
+    return '🏦'
+  }
 
-        if (product?.id) {
-          productsById[product.id] =
-            product
-        } else {
-          productsById[productId] =
-            product
-        }
+  return '💳'
+}
 
-      } catch (error) {
-        console.error(
-          `Gagal mengambil produk ${productId}:`,
-          error
-        )
-      }
-    })
-  )
+/*
+|--------------------------------------------------------------------------
+| Payment Status
+|--------------------------------------------------------------------------
+*/
 
-  return items.map((item) => {
-    const productId =
-      getProductId(item)
+function getPaymentStatusLabel(status) {
+  const statuses = {
+    completed: 'Sudah Dibayar',
+    pending: 'Menunggu Pembayaran',
+    cancelled: 'Dibatalkan',
+  }
 
-    const existingName =
-      getProductName(item)
+  return statuses[status] || status || '-'
+}
 
-    const product =
-      productsById[productId]
-
-    if (!product) {
-      return item
-    }
-
+function getPaymentStatusStyle(status) {
+  if (status === 'completed') {
     return {
-      ...item,
-
-      product: {
-        ...(item.product || {}),
-        ...product,
-      },
-
-      product_name:
-        existingName ||
-        product.name ||
-        product.product_name ||
-        '',
-
-      brand:
-        getProductBrand(item) ||
-        product.brand ||
-        '',
-
-      size:
-        getProductSize(item) ||
-        product.size ||
-        '',
-
-      unit:
-        item.unit ||
-        product.base_unit ||
-        product.unit ||
-        null,
+      wrapper:
+        'border-green-200 bg-green-50',
+      icon:
+        'bg-green-100 text-green-600',
+      text:
+        'text-green-700',
     }
-  })
+  }
+
+  if (status === 'pending') {
+    return {
+      wrapper:
+        'border-yellow-200 bg-yellow-50',
+      icon:
+        'bg-yellow-100 text-yellow-600',
+      text:
+        'text-yellow-700',
+    }
+  }
+
+  if (status === 'cancelled') {
+    return {
+      wrapper:
+        'border-red-200 bg-red-50',
+      icon:
+        'bg-red-100 text-red-600',
+      text:
+        'text-red-700',
+    }
+  }
+
+  return {
+    wrapper:
+      'border-gray-200 bg-gray-50',
+    icon:
+      'bg-gray-100 text-gray-600',
+    text:
+      'text-gray-700',
+  }
+}
+
+/*
+|--------------------------------------------------------------------------
+| Transaction Status
+|--------------------------------------------------------------------------
+*/
+
+function getTransactionStatusLabel(status) {
+  const statuses = {
+    completed: 'Selesai',
+    pending: 'Pending',
+    cancelled: 'Dibatalkan',
+  }
+
+  return statuses[status] || status || '-'
+}
+
+function getTransactionStatusStyle(status) {
+  if (status === 'completed') {
+    return 'bg-green-100 text-green-700'
+  }
+
+  if (status === 'pending') {
+    return 'bg-yellow-100 text-yellow-700'
+  }
+
+  if (status === 'cancelled') {
+    return 'bg-red-100 text-red-700'
+  }
+
+  return 'bg-gray-100 text-gray-700'
+}
+
+/*
+|--------------------------------------------------------------------------
+| Product / Item Helper
+|--------------------------------------------------------------------------
+*/
+
+function getProductName(item) {
+  return (
+    item?.product?.name ??
+    item?.product_name ??
+    item?.name ??
+    'Produk'
+  )
+}
+
+function getProductBrand(item) {
+  return (
+    item?.product?.brand ??
+    item?.brand ??
+    ''
+  )
+}
+
+function getProductSize(item) {
+  return (
+    item?.product?.size ??
+    item?.size ??
+    ''
+  )
+}
+
+function getUnitName(item) {
+  return (
+    item?.unit?.name ??
+    item?.unit_name ??
+    item?.product_unit?.unit?.name ??
+    '-'
+  )
+}
+
+function getUnitSymbol(item) {
+  return (
+    item?.unit?.symbol ??
+    item?.symbol ??
+    ''
+  )
+}
+
+function getItemQuantity(item) {
+  return Number(
+    item?.quantity ??
+    item?.qty ??
+    0
+  )
+}
+
+function getItemPrice(item) {
+  return Number(
+    item?.unit_price ??
+    item?.price ??
+    item?.selling_price ??
+    0
+  )
+}
+
+function getItemSubtotal(item) {
+  return Number(
+    item?.subtotal ??
+    item?.sub_total ??
+    0
+  )
 }
 
 /*
@@ -487,15 +271,18 @@ async function enrichItemsWithProducts(items) {
 export default function TransactionDetail() {
   const { id } = useParams()
   const navigate = useNavigate()
+  const { user } = useAuth()
 
   const [transaction, setTransaction] = useState(null)
   const [loading, setLoading] = useState(true)
-  const [error, setError] = useState('')
+  const [confirming, setConfirming] = useState(false)
   const [printing, setPrinting] = useState(false)
+  const [error, setError] = useState('')
+  const [success, setSuccess] = useState('')
 
   /*
   |--------------------------------------------------------------------------
-  | Fetch Detail
+  | Fetch Transaction
   |--------------------------------------------------------------------------
   */
 
@@ -518,22 +305,10 @@ export default function TransactionDetail() {
       )
 
       const data =
-        response.data?.data ||
+        response.data?.data ??
         response.data
 
-      const items =
-        getItems(data)
-
-      const enrichedItems =
-        await enrichItemsWithProducts(items)
-
-      const enrichedData = {
-        ...data,
-        items: enrichedItems,
-        details: enrichedItems,
-      }
-
-      setTransaction(enrichedData)
+      setTransaction(data)
 
     } catch (err) {
       console.error(
@@ -542,11 +317,84 @@ export default function TransactionDetail() {
       )
 
       setError(
-        err.response?.data?.message ||
-          'Gagal mengambil detail transaksi.'
+        err.response?.data?.message ??
+        'Gagal mengambil detail transaksi.'
       )
     } finally {
       setLoading(false)
+    }
+  }
+
+  /*
+  |--------------------------------------------------------------------------
+  | Confirm Payment
+  |--------------------------------------------------------------------------
+  */
+
+  const handleConfirmPayment = async () => {
+    if (!transaction) {
+      return
+    }
+
+    const paymentMethod =
+      transaction.payment_method
+
+    if (
+      paymentMethod !== 'qris' &&
+      paymentMethod !== 'transfer'
+    ) {
+      return
+    }
+
+    if (
+      transaction.payment_status === 'completed'
+    ) {
+      return
+    }
+
+    const confirmed = window.confirm(
+      `Konfirmasi bahwa pembayaran ${getPaymentMethodLabel(
+        paymentMethod
+      )} untuk transaksi ini sudah diterima?`
+    )
+
+    if (!confirmed) {
+      return
+    }
+
+    try {
+      setConfirming(true)
+      setError('')
+      setSuccess('')
+
+      const response = await api.post(
+        `/transactions/${id}/confirm-payment`
+      )
+
+      console.log(
+        'CONFIRM PAYMENT:',
+        JSON.stringify(response.data, null, 2)
+      )
+
+      setSuccess(
+        response.data?.message ??
+        'Pembayaran berhasil dikonfirmasi.'
+      )
+
+      await fetchTransaction()
+
+    } catch (err) {
+      console.error(
+        'CONFIRM PAYMENT ERROR:',
+        err
+      )
+
+      setError(
+        err.response?.data?.message ??
+        'Gagal mengonfirmasi pembayaran.'
+      )
+    } finally {
+      setConfirming(false)
     }
   }
 
@@ -560,6 +408,7 @@ export default function TransactionDetail() {
     try {
       setPrinting(true)
       setError('')
+      setSuccess('')
 
       const response = await api.get(
         `/transactions/${id}/reprint`
@@ -571,22 +420,10 @@ export default function TransactionDetail() {
       )
 
       const data =
-        response.data?.data ||
+        response.data?.data ??
         response.data
 
-      const items =
-        getItems(data)
-
-      const enrichedItems =
-        await enrichItemsWithProducts(items)
-
-      const enrichedData = {
-        ...data,
-        items: enrichedItems,
-        details: enrichedItems,
-      }
-
-      printReceipt(enrichedData)
+      printReceipt(data)
 
     } catch (err) {
       console.error(
@@ -595,8 +432,8 @@ export default function TransactionDetail() {
       )
 
       setError(
-        err.response?.data?.message ||
-          'Gagal mencetak ulang struk.'
+        err.response?.data?.message ??
+        'Gagal mencetak ulang struk.'
       )
     } finally {
       setPrinting(false)
@@ -610,51 +447,47 @@ export default function TransactionDetail() {
   */
 
   const printReceipt = (data) => {
-    console.log(
-      'PRINT RAW DATA:',
-      JSON.stringify(data, null, 2)
-    )
-
     const items =
-      getItems(data)
-
-    const total =
-      getTransactionTotal(
-        data,
-        items
-      )
-
-    const paid =
-      getTransactionPaid(data)
-
-    const change =
-      getTransactionChange(
-        data,
-        total,
-        paid
-      )
+      data?.details ??
+      data?.items ??
+      []
 
     const transactionNumber =
-      getTransactionNumber(data)
+      data?.transaction_number ??
+      '-'
 
     const transactionDate =
-      getTransactionDate(data)
+      data?.transaction_date ??
+      data?.created_at
 
     const cashierName =
-      getCashierName(data)
+      data?.user?.name ??
+      'Kasir'
 
-    console.log(
-      'PRINT DATA:',
-      {
-        transactionNumber,
-        transactionDate,
-        cashierName,
-        items,
-        total,
-        paid,
-        change,
-      }
-    )
+    const customerName =
+      data?.customer?.name ??
+      'Pelanggan Umum'
+
+    const subtotal =
+      Number(data?.subtotal ?? 0)
+
+    const discount =
+      Number(data?.discount ?? 0)
+
+    const total =
+      Number(data?.total ?? 0)
+
+    const paid =
+      Number(data?.paid ?? 0)
+
+    const change =
+      Number(data?.change ?? 0)
+
+    const paymentMethod =
+      data?.payment_method
+
+    const paymentStatus =
+      data?.payment_status
 
     const receiptWindow =
       window.open(
@@ -671,68 +504,74 @@ export default function TransactionDetail() {
       return
     }
 
-    const itemsHtml =
-      items
-        .map((item) => {
-          const productName =
-            getProductName(item) ||
-            'Produk'
+    const itemsHtml = items
+      .map((item) => {
+        const name =
+          getProductName(item)
 
-          const brand =
-            getProductBrand(item)
+        const brand =
+          getProductBrand(item)
 
-          const size =
-            getProductSize(item)
+        const size =
+          getProductSize(item)
 
-          const unitName =
-            getUnitName(item)
+        const unit =
+          getUnitName(item)
 
-          const quantity =
-            getItemQuantity(item)
+        const symbol =
+          getUnitSymbol(item)
 
-          const price =
-            getItemPrice(item)
+        const quantity =
+          getItemQuantity(item)
 
-          const subtotal =
-            getItemSubtotal(item)
+        const price =
+          getItemPrice(item)
 
-          let productDescription =
-            productName
+        const itemSubtotal =
+          getItemSubtotal(item)
 
-          if (brand) {
-            productDescription +=
-              ` - ${brand}`
-          }
+        let productDescription =
+          name
 
-          if (size) {
-            productDescription +=
-              ` (${size})`
-          }
+        if (brand) {
+          productDescription +=
+            ` - ${brand}`
+        }
 
-          return `
-            <tr>
-              <td colspan="3" class="product-name">
-                ${productDescription}
-              </td>
-            </tr>
+        if (size) {
+          productDescription +=
+            ` (${size})`
+        }
 
-            <tr>
-              <td>
-                ${formatQuantity(quantity)}
-                ${unitName}
-              </td>
+        const unitDisplay =
+          symbol
+            ? `${unit} (${symbol})`
+            : unit
 
-              <td>
-                ${formatRupiah(price)}
-              </td>
+        return `
+          <tr>
+            <td colspan="3" class="product-name">
+              ${productDescription}
+            </td>
+          </tr>
 
-              <td style="text-align:right">
-                ${formatRupiah(subtotal)}
-              </td>
-            </tr>
-          `
-        })
-        .join('')
+          <tr>
+            <td>
+              ${formatQuantity(quantity)}
+              ${unitDisplay}
+            </td>
+
+            <td>
+              ${formatRupiah(price)}
+            </td>
+
+            <td style="text-align:right">
+              ${formatRupiah(itemSubtotal)}
+            </td>
+          </tr>
+        `
+      })
+      .join('')
 
     receiptWindow.document.write(`
       <!DOCTYPE html>
@@ -800,6 +639,10 @@ export default function TransactionDetail() {
               text-align: center;
             }
 
+            .payment {
+              margin-top: 8px;
+            }
+
             @media print {
               body {
                 width: 80mm;
@@ -831,13 +674,15 @@ export default function TransactionDetail() {
           </div>
 
           <div>
-            Tanggal: ${formatDate(
-              transactionDate
-            )}
+            Tanggal: ${formatDate(transactionDate)}
           </div>
 
           <div>
             Kasir: ${cashierName}
+          </div>
+
+          <div>
+            Pelanggan: ${customerName}
           </div>
 
           <div class="line"></div>
@@ -850,6 +695,26 @@ export default function TransactionDetail() {
 
           <table>
 
+            <tr>
+              <td>
+                Subtotal
+              </td>
+
+              <td style="text-align:right">
+                ${formatRupiah(subtotal)}
+              </td>
+            </tr>
+
+            <tr>
+              <td>
+                Diskon
+              </td>
+
+              <td style="text-align:right">
+                ${formatRupiah(discount)}
+              </td>
+            </tr>
+
             <tr class="total">
 
               <td>
@@ -858,6 +723,30 @@ export default function TransactionDetail() {
 
               <td style="text-align:right">
                 ${formatRupiah(total)}
+              </td>
+
+            </tr>
+
+            <tr>
+
+              <td>
+                Pembayaran
+              </td>
+
+              <td style="text-align:right">
+                ${getPaymentMethodLabel(paymentMethod)}
+              </td>
+
+            </tr>
+
+            <tr>
+
+              <td>
+                Status
+              </td>
+
+              <td style="text-align:right">
+                ${getPaymentStatusLabel(paymentStatus)}
               </td>
 
             </tr>
@@ -913,8 +802,14 @@ export default function TransactionDetail() {
   if (loading) {
     return (
       <DashboardLayout>
-        <div className="rounded-xl border border-gray-200 bg-white p-10 text-center">
-          Memuat detail transaksi...
+        <div className="mx-auto max-w-5xl">
+          <div className="rounded-xl border border-gray-200 bg-white p-10 text-center shadow-sm">
+            <RefreshCw className="mx-auto mb-3 h-6 w-6 animate-spin text-blue-600" />
+
+            <p className="text-sm text-gray-500">
+              Memuat detail transaksi...
+            </p>
+          </div>
         </div>
       </DashboardLayout>
     )
@@ -929,19 +824,20 @@ export default function TransactionDetail() {
   if (error && !transaction) {
     return (
       <DashboardLayout>
-        <div className="space-y-4">
+        <div className="mx-auto max-w-5xl space-y-4">
 
           <button
             type="button"
             onClick={() =>
               navigate('/transactions')
             }
-            className="text-sm font-semibold text-blue-600 hover:text-blue-700"
+            className="inline-flex items-center gap-2 text-sm font-semibold text-blue-600 hover:text-blue-700"
           >
-            ← Kembali ke Riwayat
+            <ArrowLeft className="h-4 w-4" />
+            Kembali ke Riwayat
           </button>
 
-          <div className="rounded-xl border border-red-200 bg-red-50 p-5 text-red-600">
+          <div className="rounded-xl border border-red-200 bg-red-50 p-5 text-sm text-red-600">
             {error}
           </div>
 
@@ -950,54 +846,70 @@ export default function TransactionDetail() {
     )
   }
 
+  if (!transaction) {
+    return null
+  }
+
   /*
   |--------------------------------------------------------------------------
   | Transaction Data
   |--------------------------------------------------------------------------
   */
 
-  const items =
-    getItems(transaction)
-
-  const total =
-    getTransactionTotal(
-      transaction,
-      items
-    )
-
-  const paid =
-    getTransactionPaid(
-      transaction
-    )
-
-  const change =
-    getTransactionChange(
-      transaction,
-      total,
-      paid
-    )
-
   const transactionNumber =
-    getTransactionNumber(
-      transaction
-    )
+    transaction.transaction_number
 
   const transactionDate =
-    getTransactionDate(
-      transaction
-    )
+    transaction.transaction_date ??
+    transaction.created_at
 
-  const cashierName =
-    getCashierName(
-      transaction
-    )
+  const cashier =
+    transaction.user
 
   const customer =
-    getCustomer(transaction)
+    transaction.customer
 
-  const status =
-    getTransactionStatus(
-      transaction
+  const items =
+    transaction.details ?? []
+
+  const subtotal =
+    Number(transaction.subtotal ?? 0)
+
+  const discount =
+    Number(transaction.discount ?? 0)
+
+  const total =
+    Number(transaction.total ?? 0)
+
+  const paid =
+    Number(transaction.paid ?? 0)
+
+  const change =
+    Number(transaction.change ?? 0)
+
+  const paymentMethod =
+    transaction.payment_method
+
+  const paymentStatus =
+    transaction.payment_status
+
+  const transactionStatus =
+    transaction.status
+
+  const isPendingPayment =
+    paymentStatus === 'pending'
+
+  const canConfirmPayment =
+    user?.role === 'admin' &&
+    isPendingPayment &&
+    (
+      paymentMethod === 'qris' ||
+      paymentMethod === 'transfer'
+    )
+
+  const paymentStyle =
+    getPaymentStatusStyle(
+      paymentStatus
     )
 
   /*
@@ -1009,7 +921,7 @@ export default function TransactionDetail() {
   return (
     <DashboardLayout>
 
-      <div className="mx-auto max-w-5xl space-y-6">
+      <div className="mx-auto max-w-6xl space-y-6">
 
         {/* Header */}
 
@@ -1022,9 +934,10 @@ export default function TransactionDetail() {
               onClick={() =>
                 navigate('/transactions')
               }
-              className="mb-3 text-sm font-semibold text-blue-600 hover:text-blue-700"
+              className="mb-3 inline-flex items-center gap-2 text-sm font-semibold text-blue-600 hover:text-blue-700"
             >
-              ← Kembali ke Riwayat
+              <ArrowLeft className="h-4 w-4" />
+              Kembali ke Riwayat
             </button>
 
             <h1 className="text-2xl font-bold text-gray-900">
@@ -1041,26 +954,56 @@ export default function TransactionDetail() {
             type="button"
             onClick={handleReprint}
             disabled={printing}
-            className="rounded-lg bg-blue-600 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-gray-300"
+            className="inline-flex items-center justify-center gap-2 rounded-lg bg-blue-600 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-gray-300"
           >
-            {printing
-              ? 'Menyiapkan...'
-              : '🖨 Cetak Struk'}
+            {printing ? (
+              <>
+                <RefreshCw className="h-4 w-4 animate-spin" />
+                Menyiapkan...
+              </>
+            ) : (
+              <>
+                <Printer className="h-4 w-4" />
+                Cetak Struk
+              </>
+            )}
           </button>
 
         </div>
 
-        {/* Error */}
+        {/* Success */}
 
-        {error && (
-          <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-600">
-            {error}
+        {success && (
+          <div className="flex items-center gap-3 rounded-xl border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-700">
+
+            <CheckCircle2 className="h-5 w-5 shrink-0" />
+
+            <span>
+              {success}
+            </span>
+
           </div>
         )}
 
-        {/* Info */}
+        {/* Error */}
+
+        {error && (
+          <div className="flex items-center gap-3 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-600">
+
+            <XCircle className="h-5 w-5 shrink-0" />
+
+            <span>
+              {error}
+            </span>
+
+          </div>
+        )}
+
+        {/* Basic Information */}
 
         <div className="grid gap-5 md:grid-cols-3">
+
+          {/* Transaction Number */}
 
           <div className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
 
@@ -1068,34 +1011,42 @@ export default function TransactionDetail() {
               Nomor Transaksi
             </p>
 
-            <p className="mt-2 font-bold text-gray-900">
+            <p className="mt-2 break-all font-bold text-gray-900">
               {transactionNumber}
             </p>
 
           </div>
 
+          {/* Date */}
+
           <div className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
 
             <p className="text-sm text-gray-500">
-              Tanggal
+              Tanggal Transaksi
             </p>
 
             <p className="mt-2 font-semibold text-gray-900">
-              {formatDate(
-                transactionDate
-              )}
+              {formatDate(transactionDate)}
             </p>
 
           </div>
 
+          {/* Transaction Status */}
+
           <div className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
 
             <p className="text-sm text-gray-500">
-              Status
+              Status Transaksi
             </p>
 
-            <span className="mt-2 inline-flex rounded-full bg-green-100 px-3 py-1 text-xs font-semibold text-green-700">
-              {status}
+            <span
+              className={`mt-2 inline-flex rounded-full px-3 py-1 text-xs font-semibold ${getTransactionStatusStyle(
+                transactionStatus
+              )}`}
+            >
+              {getTransactionStatusLabel(
+                transactionStatus
+              )}
             </span>
 
           </div>
@@ -1106,38 +1057,208 @@ export default function TransactionDetail() {
 
         <div className="grid gap-5 md:grid-cols-2">
 
+          {/* Customer */}
+
           <div className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
 
-            <p className="text-sm font-semibold text-gray-500">
-              Pelanggan
-            </p>
+            <div className="flex items-center gap-3">
 
-            <p className="mt-2 text-lg font-bold text-gray-900">
-              {customer?.name ||
-                'Pelanggan Umum'}
-            </p>
+              <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-blue-100 text-blue-600">
+                <UserRound className="h-5 w-5" />
+              </div>
+
+              <div>
+
+                <p className="text-sm text-gray-500">
+                  Pelanggan
+                </p>
+
+                <p className="font-bold text-gray-900">
+                  {customer?.name ??
+                    'Pelanggan Umum'}
+                </p>
+
+              </div>
+
+            </div>
 
             {customer?.phone && (
-              <p className="mt-1 text-sm text-gray-500">
-                {customer.phone}
+              <p className="mt-4 text-sm text-gray-500">
+                No. HP: {customer.phone}
               </p>
             )}
 
           </div>
 
+          {/* Cashier */}
+
           <div className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
 
-            <p className="text-sm font-semibold text-gray-500">
-              Kasir
-            </p>
+            <div className="flex items-center gap-3">
 
-            <p className="mt-2 text-lg font-bold text-gray-900">
-              {cashierName}
-            </p>
+              <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-gray-100 text-gray-600">
+                <User className="h-5 w-5" />
+              </div>
+
+              <div>
+
+                <p className="text-sm text-gray-500">
+                  Kasir
+                </p>
+
+                <p className="font-bold text-gray-900">
+                  {cashier?.name ??
+                    'Kasir'}
+                </p>
+
+              </div>
+
+            </div>
+
+            {cashier?.email && (
+              <p className="mt-4 text-sm text-gray-500">
+                {cashier.email}
+              </p>
+            )}
 
           </div>
 
         </div>
+
+        {/* Payment Information */}
+
+        <div className="grid gap-5 md:grid-cols-2">
+
+          {/* Payment Method */}
+
+          <div className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
+
+            <div className="flex items-start gap-4">
+
+              <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-blue-100 text-2xl">
+                {getPaymentMethodIcon(
+                  paymentMethod
+                )}
+              </div>
+
+              <div className="min-w-0">
+
+                <p className="text-sm text-gray-500">
+                  Metode Pembayaran
+                </p>
+
+                <p className="mt-1 text-xl font-bold text-gray-900">
+                  {getPaymentMethodLabel(
+                    paymentMethod
+                  )}
+                </p>
+
+                <p className="mt-1 text-sm text-gray-500">
+                  {getPaymentMethodDescription(
+                    paymentMethod
+                  )}
+                </p>
+
+              </div>
+
+            </div>
+
+          </div>
+
+          {/* Payment Status */}
+
+          <div
+            className={`rounded-xl border p-5 shadow-sm ${paymentStyle.wrapper}`}
+          >
+
+            <div className="flex items-start gap-4">
+
+              <div
+                className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-xl ${paymentStyle.icon}`}
+              >
+                {paymentStatus === 'completed' ? (
+                  <CheckCircle2 className="h-6 w-6" />
+                ) : paymentStatus === 'pending' ? (
+                  <Clock3 className="h-6 w-6" />
+                ) : (
+                  <XCircle className="h-6 w-6" />
+                )}
+              </div>
+
+              <div>
+
+                <p className="text-sm text-gray-500">
+                  Status Pembayaran
+                </p>
+
+                <p
+                  className={`mt-1 text-xl font-bold ${paymentStyle.text}`}
+                >
+                  {getPaymentStatusLabel(
+                    paymentStatus
+                  )}
+                </p>
+
+                {isPendingPayment && (
+                  <p className="mt-1 text-sm text-gray-600">
+                    Menunggu konfirmasi pembayaran dari admin.
+                  </p>
+                )}
+
+              </div>
+
+            </div>
+
+          </div>
+
+        </div>
+
+        {/* Confirm Payment */}
+
+        {canConfirmPayment && (
+          <div className="rounded-xl border border-yellow-200 bg-yellow-50 p-5">
+
+            <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+
+              <div>
+
+                <h2 className="font-bold text-yellow-900">
+                  Pembayaran Menunggu Konfirmasi
+                </h2>
+
+                <p className="mt-1 text-sm text-yellow-800">
+                  Pastikan pembayaran{' '}
+                  {getPaymentMethodLabel(
+                    paymentMethod
+                  )}{' '}
+                  sudah benar-benar diterima sebelum dikonfirmasi.
+                </p>
+
+              </div>
+
+              <button
+                type="button"
+                onClick={handleConfirmPayment}
+                disabled={confirming}
+                className="inline-flex shrink-0 items-center justify-center gap-2 rounded-lg bg-green-600 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-green-700 disabled:cursor-not-allowed disabled:bg-gray-300"
+              >
+                {confirming ? (
+                  <>
+                    <RefreshCw className="h-4 w-4 animate-spin" />
+                    Mengonfirmasi...
+                  </>
+                ) : (
+                  <>
+                    <CheckCircle2 className="h-4 w-4" />
+                    Konfirmasi Pembayaran
+                  </>
+                )}
+              </button>
+
+            </div>
+
+          </div>
+        )}
 
         {/* Items */}
 
@@ -1145,33 +1266,53 @@ export default function TransactionDetail() {
 
           <div className="border-b border-gray-200 p-5">
 
-            <h2 className="font-bold text-gray-900">
-              Barang yang Dibeli
-            </h2>
+            <div className="flex items-center gap-3">
+
+              <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-blue-100 text-blue-600">
+                <CreditCard className="h-5 w-5" />
+              </div>
+
+              <div>
+
+                <h2 className="font-bold text-gray-900">
+                  Barang yang Dibeli
+                </h2>
+
+                <p className="text-sm text-gray-500">
+                  {items.length} jenis barang
+                </p>
+
+              </div>
+
+            </div>
 
           </div>
 
           <div className="overflow-x-auto">
 
-            <table className="w-full min-w-[700px] text-sm">
+            <table className="w-full min-w-[750px] text-sm">
 
               <thead className="bg-gray-50">
 
                 <tr>
 
-                  <th className="px-5 py-4 text-left">
+                  <th className="px-5 py-4 text-left font-semibold text-gray-600">
+                    #
+                  </th>
+
+                  <th className="px-5 py-4 text-left font-semibold text-gray-600">
                     Barang
                   </th>
 
-                  <th className="px-5 py-4 text-center">
+                  <th className="px-5 py-4 text-center font-semibold text-gray-600">
                     Qty
                   </th>
 
-                  <th className="px-5 py-4 text-right">
+                  <th className="px-5 py-4 text-right font-semibold text-gray-600">
                     Harga
                   </th>
 
-                  <th className="px-5 py-4 text-right">
+                  <th className="px-5 py-4 text-right font-semibold text-gray-600">
                     Subtotal
                   </th>
 
@@ -1186,7 +1327,7 @@ export default function TransactionDetail() {
                   <tr>
 
                     <td
-                      colSpan="4"
+                      colSpan="5"
                       className="px-5 py-10 text-center text-gray-500"
                     >
                       Detail barang tidak tersedia.
@@ -1200,8 +1341,7 @@ export default function TransactionDetail() {
                     (item, index) => {
 
                       const name =
-                        getProductName(item) ||
-                        'Produk'
+                        getProductName(item)
 
                       const brand =
                         getProductBrand(item)
@@ -1209,29 +1349,37 @@ export default function TransactionDetail() {
                       const size =
                         getProductSize(item)
 
-                      const unit =
+                      const unitName =
                         getUnitName(item)
 
-                      const qty =
+                      const unitSymbol =
+                        getUnitSymbol(item)
+
+                      const quantity =
                         getItemQuantity(item)
 
                       const price =
                         getItemPrice(item)
 
-                      const subtotal =
+                      const itemSubtotal =
                         getItemSubtotal(item)
 
                       return (
                         <tr
                           key={
-                            item.id ||
+                            item.id ??
                             index
                           }
+                          className="hover:bg-gray-50"
                         >
+
+                          <td className="px-5 py-4 text-gray-500">
+                            {index + 1}
+                          </td>
 
                           <td className="px-5 py-4">
 
-                            <p className="font-medium text-gray-900">
+                            <p className="font-semibold text-gray-900">
                               {name}
                             </p>
 
@@ -1239,9 +1387,9 @@ export default function TransactionDetail() {
                               <p className="mt-1 text-xs text-gray-500">
 
                                 {brand && (
-                                  <>
+                                  <span>
                                     {brand}
-                                  </>
+                                  </span>
                                 )}
 
                                 {brand && size && (
@@ -1251,9 +1399,9 @@ export default function TransactionDetail() {
                                 )}
 
                                 {size && (
-                                  <>
+                                  <span>
                                     {size}
-                                  </>
+                                  </span>
                                 )}
 
                               </p>
@@ -1261,9 +1409,19 @@ export default function TransactionDetail() {
 
                           </td>
 
-                          <td className="px-5 py-4 text-center text-gray-600">
-                            {formatQuantity(qty)}{' '}
-                            {unit}
+                          <td className="px-5 py-4 text-center">
+
+                            <span className="font-semibold text-gray-900">
+                              {formatQuantity(
+                                quantity
+                              )}
+                            </span>
+
+                            <span className="ml-1 text-gray-500">
+                              {unitSymbol ||
+                                unitName}
+                            </span>
+
                           </td>
 
                           <td className="px-5 py-4 text-right text-gray-600">
@@ -1274,7 +1432,7 @@ export default function TransactionDetail() {
 
                           <td className="px-5 py-4 text-right font-semibold text-gray-900">
                             {formatRupiah(
-                              subtotal
+                              itemSubtotal
                             )}
                           </td>
 
@@ -1295,43 +1453,125 @@ export default function TransactionDetail() {
 
         {/* Summary */}
 
-        <div className="ml-auto max-w-md rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
+        <div className="grid gap-5 md:grid-cols-2">
 
-          <div className="flex justify-between py-2">
+          {/* Payment Summary */}
 
-            <span className="text-gray-500">
-              Total
-            </span>
+          <div className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
 
-            <span className="font-bold text-gray-900">
-              {formatRupiah(total)}
-            </span>
+            <h2 className="mb-4 font-bold text-gray-900">
+              Informasi Pembayaran
+            </h2>
+
+            <div className="space-y-3">
+
+              <div className="flex items-center justify-between">
+
+                <span className="text-gray-500">
+                  Metode
+                </span>
+
+                <span className="font-semibold text-gray-900">
+                  {getPaymentMethodLabel(
+                    paymentMethod
+                  )}
+                </span>
+
+              </div>
+
+              <div className="flex items-center justify-between">
+
+                <span className="text-gray-500">
+                  Status
+                </span>
+
+                <span
+                  className={`rounded-full px-3 py-1 text-xs font-semibold ${paymentStyle.text} ${paymentStyle.wrapper}`}
+                >
+                  {getPaymentStatusLabel(
+                    paymentStatus
+                  )}
+                </span>
+
+              </div>
+
+              <div className="flex items-center justify-between">
+
+                <span className="text-gray-500">
+                  Dibayar
+                </span>
+
+                <span className="font-semibold text-gray-900">
+                  {formatRupiah(paid)}
+                </span>
+
+              </div>
+
+              <div className="flex items-center justify-between">
+
+                <span className="text-gray-500">
+                  Kembalian
+                </span>
+
+                <span className="font-semibold text-green-600">
+                  {formatRupiah(change)}
+                </span>
+
+              </div>
+
+            </div>
 
           </div>
 
-          <div className="flex justify-between py-2">
+          {/* Total Summary */}
 
-            <span className="text-gray-500">
-              Pembayaran
-            </span>
+          <div className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
 
-            <span className="font-semibold text-gray-900">
-              {formatRupiah(paid)}
-            </span>
+            <h2 className="mb-4 font-bold text-gray-900">
+              Ringkasan Transaksi
+            </h2>
 
-          </div>
+            <div className="space-y-3">
 
-          <div className="my-2 border-t border-gray-200" />
+              <div className="flex justify-between">
 
-          <div className="flex justify-between py-2">
+                <span className="text-gray-500">
+                  Subtotal
+                </span>
 
-            <span className="font-semibold text-gray-700">
-              Kembalian
-            </span>
+                <span className="font-semibold text-gray-900">
+                  {formatRupiah(subtotal)}
+                </span>
 
-            <span className="text-lg font-bold text-green-600">
-              {formatRupiah(change)}
-            </span>
+              </div>
+
+              <div className="flex justify-between">
+
+                <span className="text-gray-500">
+                  Diskon
+                </span>
+
+                <span className="font-semibold text-gray-900">
+                  {formatRupiah(discount)}
+                </span>
+
+              </div>
+
+              <div className="my-3 border-t border-gray-200" />
+
+              <div className="flex items-center justify-between">
+
+                <span className="text-lg font-bold text-gray-900">
+                  Total
+                </span>
+
+                <span className="text-2xl font-bold text-blue-600">
+                  {formatRupiah(total)}
+                </span>
+
+              </div>
+
+            </div>
 
           </div>
 
