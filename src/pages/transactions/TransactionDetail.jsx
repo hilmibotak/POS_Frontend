@@ -116,44 +116,32 @@ function getPaymentStatusLabel(status) {
 function getPaymentStatusStyle(status) {
   if (status === 'completed') {
     return {
-      wrapper:
-        'border-green-200 bg-green-50',
-      icon:
-        'bg-green-100 text-green-600',
-      text:
-        'text-green-700',
+      wrapper: 'border-green-200 bg-green-50',
+      icon: 'bg-green-100 text-green-600',
+      text: 'text-green-700',
     }
   }
 
   if (status === 'pending') {
     return {
-      wrapper:
-        'border-yellow-200 bg-yellow-50',
-      icon:
-        'bg-yellow-100 text-yellow-600',
-      text:
-        'text-yellow-700',
+      wrapper: 'border-yellow-200 bg-yellow-50',
+      icon: 'bg-yellow-100 text-yellow-600',
+      text: 'text-yellow-700',
     }
   }
 
   if (status === 'cancelled') {
     return {
-      wrapper:
-        'border-red-200 bg-red-50',
-      icon:
-        'bg-red-100 text-red-600',
-      text:
-        'text-red-700',
+      wrapper: 'border-red-200 bg-red-50',
+      icon: 'bg-red-100 text-red-600',
+      text: 'text-red-700',
     }
   }
 
   return {
-    wrapper:
-      'border-gray-200 bg-gray-50',
-    icon:
-      'bg-gray-100 text-gray-600',
-    text:
-      'text-gray-700',
+    wrapper: 'border-gray-200 bg-gray-50',
+    icon: 'bg-gray-100 text-gray-600',
+    text: 'text-gray-700',
   }
 }
 
@@ -305,9 +293,16 @@ export default function TransactionDetail() {
       )
 
       const data =
+        response.data?.data?.transaction ??
         response.data?.data ??
+        response.data?.transaction ??
         response.data
 
+      /*
+       * PENTING:
+       * Data transaksi disimpan ke state.
+       * Jangan panggil printReceipt() di sini.
+       */
       setTransaction(data)
 
     } catch (err) {
@@ -404,40 +399,33 @@ export default function TransactionDetail() {
   |--------------------------------------------------------------------------
   */
 
-  const handleReprint = async () => {
-    try {
-      setPrinting(true)
-      setError('')
-      setSuccess('')
-
-      const response = await api.get(
-        `/transactions/${id}/reprint`
-      )
-
-      console.log(
-        'REPRINT RESPONSE:',
-        JSON.stringify(response.data, null, 2)
-      )
-
-      const data =
-        response.data?.data ??
-        response.data
-
-      printReceipt(data)
-
-    } catch (err) {
-      console.error(
-        'REPRINT ERROR:',
-        err
-      )
-
-      setError(
-        err.response?.data?.message ??
-        'Gagal mencetak ulang struk.'
-      )
-    } finally {
-      setPrinting(false)
+  const handleReprint = () => {
+    if (!transaction) {
+      setError('Data transaksi belum tersedia.')
+      return
     }
+
+    setPrinting(true)
+    setError('')
+    setSuccess('')
+
+    console.log(
+      'DATA TRANSAKSI UNTUK PRINT:',
+      JSON.stringify(transaction, null, 2)
+    )
+
+    /*
+     * Gunakan data transaction yang sudah dipakai
+     * oleh halaman Detail Transaksi.
+     *
+     * Jadi data barang, subtotal, total, kasir,
+     * pelanggan, dan pembayaran tetap ikut tercetak.
+     */
+    printReceipt(transaction)
+
+    setTimeout(() => {
+      setPrinting(false)
+    }, 500)
   }
 
   /*
@@ -462,6 +450,7 @@ export default function TransactionDetail() {
 
     const cashierName =
       data?.user?.name ??
+      data?.cashier?.name ??
       'Kasir'
 
     const customerName =
@@ -578,6 +567,8 @@ export default function TransactionDetail() {
 
       <html>
         <head>
+
+          <meta charset="UTF-8" />
 
           <title>
             Struk ${transactionNumber}
@@ -789,6 +780,7 @@ export default function TransactionDetail() {
     receiptWindow.document.close()
 
     setTimeout(() => {
+      receiptWindow.focus()
       receiptWindow.print()
     }, 300)
   }
@@ -802,15 +794,21 @@ export default function TransactionDetail() {
   if (loading) {
     return (
       <DashboardLayout>
+
         <div className="mx-auto max-w-5xl">
+
           <div className="rounded-xl border border-gray-200 bg-white p-10 text-center shadow-sm">
+
             <RefreshCw className="mx-auto mb-3 h-6 w-6 animate-spin text-blue-600" />
 
             <p className="text-sm text-gray-500">
               Memuat detail transaksi...
             </p>
+
           </div>
+
         </div>
+
       </DashboardLayout>
     )
   }
@@ -824,6 +822,7 @@ export default function TransactionDetail() {
   if (error && !transaction) {
     return (
       <DashboardLayout>
+
         <div className="mx-auto max-w-5xl space-y-4">
 
           <button
@@ -834,6 +833,7 @@ export default function TransactionDetail() {
             className="inline-flex items-center gap-2 text-sm font-semibold text-blue-600 hover:text-blue-700"
           >
             <ArrowLeft className="h-4 w-4" />
+
             Kembali ke Riwayat
           </button>
 
@@ -842,6 +842,7 @@ export default function TransactionDetail() {
           </div>
 
         </div>
+
       </DashboardLayout>
     )
   }
@@ -937,6 +938,7 @@ export default function TransactionDetail() {
               className="mb-3 inline-flex items-center gap-2 text-sm font-semibold text-blue-600 hover:text-blue-700"
             >
               <ArrowLeft className="h-4 w-4" />
+
               Kembali ke Riwayat
             </button>
 
@@ -959,11 +961,13 @@ export default function TransactionDetail() {
             {printing ? (
               <>
                 <RefreshCw className="h-4 w-4 animate-spin" />
+
                 Menyiapkan...
               </>
             ) : (
               <>
                 <Printer className="h-4 w-4" />
+
                 Cetak Struk
               </>
             )}
@@ -1064,7 +1068,9 @@ export default function TransactionDetail() {
             <div className="flex items-center gap-3">
 
               <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-blue-100 text-blue-600">
+
                 <UserRound className="h-5 w-5" />
+
               </div>
 
               <div>
@@ -1097,7 +1103,9 @@ export default function TransactionDetail() {
             <div className="flex items-center gap-3">
 
               <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-gray-100 text-gray-600">
+
                 <User className="h-5 w-5" />
+
               </div>
 
               <div>
@@ -1136,9 +1144,11 @@ export default function TransactionDetail() {
             <div className="flex items-start gap-4">
 
               <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-blue-100 text-2xl">
+
                 {getPaymentMethodIcon(
                   paymentMethod
                 )}
+
               </div>
 
               <div className="min-w-0">
@@ -1176,6 +1186,7 @@ export default function TransactionDetail() {
               <div
                 className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-xl ${paymentStyle.icon}`}
               >
+
                 {paymentStatus === 'completed' ? (
                   <CheckCircle2 className="h-6 w-6" />
                 ) : paymentStatus === 'pending' ? (
@@ -1183,6 +1194,7 @@ export default function TransactionDetail() {
                 ) : (
                   <XCircle className="h-6 w-6" />
                 )}
+
               </div>
 
               <div>
@@ -1245,11 +1257,13 @@ export default function TransactionDetail() {
                 {confirming ? (
                   <>
                     <RefreshCw className="h-4 w-4 animate-spin" />
+
                     Mengonfirmasi...
                   </>
                 ) : (
                   <>
                     <CheckCircle2 className="h-4 w-4" />
+
                     Konfirmasi Pembayaran
                   </>
                 )}
@@ -1269,7 +1283,9 @@ export default function TransactionDetail() {
             <div className="flex items-center gap-3">
 
               <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-blue-100 text-blue-600">
+
                 <CreditCard className="h-5 w-5" />
+
               </div>
 
               <div>

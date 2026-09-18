@@ -63,6 +63,32 @@ function getProductSize(product) {
   return String(product.size || '').trim()
 }
 
+/*
+|--------------------------------------------------------------------------
+| Informasi pembayaran toko
+|--------------------------------------------------------------------------
+|
+| QRIS:
+| Simpan gambar QRIS toko di:
+|
+| public/qris-toko.png
+|
+| Maka gambar bisa dipanggil dengan:
+| /qris-toko.png
+|
+| Transfer:
+| Ganti data rekening berikut sesuai rekening toko.
+|
+*/
+const STORE_PAYMENT_INFO = {
+  qrisImage: '/qris_toko.jpeg',
+  qrisName: 'QRIS Toko Bangunan',
+
+  bankName: 'BCA',
+  accountNumber: '1234567890',
+  accountName: 'TOKO BANGUNAN',
+}
+
 export default function Cashier() {
   const navigate = useNavigate()
 
@@ -90,6 +116,9 @@ export default function Cashier() {
   const [paymentMethod, setPaymentMethod] = useState('cash')
   const [paid, setPaid] = useState('')
   const [loadingTransaction, setLoadingTransaction] = useState(false)
+
+  // Fallback apabila gambar QRIS belum tersedia
+  const [qrisImageError, setQrisImageError] = useState(false)
 
   useEffect(() => {
     fetchProducts()
@@ -169,14 +198,20 @@ export default function Cashier() {
   | Nilai pembayaran
   |--------------------------------------------------------------------------
   |
-  | Untuk transfer dan QRIS, pembayaran otomatis dianggap sesuai total.
-  | Untuk tunai, menggunakan nilai dari input paid.
+  | Cash:
+  | - paid mengikuti input kasir
+  | - change dihitung dari paid - total
+  |
+  | QRIS / Transfer:
+  | - transaksi dibuat pending
+  | - paid dikirim 0
+  | - setelah admin konfirmasi backend akan mengubah paid menjadi total
   |
   */
   const paidAmount =
     paymentMethod === 'cash'
       ? Number(paid) || 0
-      : total
+      : 0
 
   const change =
     paymentMethod === 'cash'
@@ -185,7 +220,11 @@ export default function Cashier() {
 
   const isPaymentValid =
     cart.length > 0 &&
-    paidAmount >= total
+    total > 0 &&
+    (
+      paymentMethod !== 'cash' ||
+      paidAmount >= total
+    )
 
   const openProductModal = async (product) => {
     setSelectedProduct(product)
@@ -210,10 +249,6 @@ export default function Cashier() {
 
       setProductUnits(units)
 
-      /*
-       * Kalau produk punya satuan tambahan,
-       * pilih satuan default jika tersedia.
-       */
       const defaultUnit =
         units.find((unit) => unit.is_default) ||
         units[0]
@@ -222,12 +257,11 @@ export default function Cashier() {
         setSelectedUnit(defaultUnit)
       }
     } catch (err) {
-      console.error('Gagal mengambil satuan produk:', err)
+      console.error(
+        'Gagal mengambil satuan produk:',
+        err
+      )
 
-      /*
-       * Kalau endpoint satuan kosong/error,
-       * tetap gunakan satuan dasar produk.
-       */
       setProductUnits([])
       setSelectedUnit(null)
     } finally {
@@ -300,7 +334,9 @@ export default function Cashier() {
     const qty = Number(quantity)
 
     if (!qty || qty <= 0) {
-      setError('Jumlah barang harus lebih dari 0.')
+      setError(
+        'Jumlah barang harus lebih dari 0.'
+      )
       return
     }
 
@@ -312,6 +348,7 @@ export default function Cashier() {
 
     /*
      * Stok produk disimpan dalam satuan dasar.
+     *
      * Contoh:
      * 0.5 Kolbak × 500 Buah = 250 Buah
      */
@@ -384,7 +421,8 @@ export default function Cashier() {
 
       if (
         selectedProduct.stock !== undefined &&
-        newBaseQuantity > Number(selectedProduct.stock)
+        newBaseQuantity >
+          Number(selectedProduct.stock)
       ) {
         setError(
           `Jumlah melebihi stok ${formatStock(
@@ -492,8 +530,8 @@ export default function Cashier() {
     setError('')
 
     /*
-     * Untuk non-tunai tidak perlu input nominal
-     * karena pembayaran dianggap sesuai total.
+     * QRIS dan Transfer tidak membutuhkan
+     * input nominal dari kasir.
      */
     if (method !== 'cash') {
       setPaid('')
@@ -542,6 +580,23 @@ export default function Cashier() {
     try {
       setLoadingTransaction(true)
 
+      /*
+       * Untuk:
+       *
+       * CASH:
+       * paid = nominal uang dari kasir
+       *
+       * QRIS / TRANSFER:
+       * paid = 0
+       *
+       * Backend akan membuat payment_status:
+       * pending
+       *
+       * Setelah admin konfirmasi:
+       * paid = total
+       * payment_status = completed
+       * stok berkurang
+       */
       const payload = {
         customer_id: selectedCustomer
           ? Number(selectedCustomer)
@@ -644,7 +699,9 @@ export default function Cashier() {
     <DashboardLayout>
       <div className="space-y-6">
 
-        {/* Header */}
+        {/* =========================================================
+            HEADER
+        ========================================================== */}
         <div>
           <h1 className="text-2xl font-bold text-gray-900">
             Kasir
@@ -655,7 +712,9 @@ export default function Cashier() {
           </p>
         </div>
 
-        {/* Error */}
+        {/* =========================================================
+            ERROR
+        ========================================================== */}
         {error && (
           <div className="flex items-center justify-between rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
             <span>{error}</span>
@@ -674,12 +733,14 @@ export default function Cashier() {
 
         <div className="grid grid-cols-1 gap-6 xl:grid-cols-3">
 
-          {/* =========================================================
+          {/* =======================================================
               LEFT
-          ========================================================== */}
+          ======================================================== */}
           <div className="space-y-6 xl:col-span-2">
 
-            {/* Customer */}
+            {/* =====================================================
+                CUSTOMER
+            ====================================================== */}
             <div className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
 
               <label className="mb-2 block text-sm font-semibold text-gray-700">
@@ -720,7 +781,9 @@ export default function Cashier() {
               </select>
             </div>
 
-            {/* Products */}
+            {/* =====================================================
+                PRODUCTS
+            ====================================================== */}
             <div className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
 
               <div className="mb-5">
@@ -892,12 +955,12 @@ export default function Cashier() {
             </div>
           </div>
 
-          {/* =========================================================
+          {/* =======================================================
               RIGHT - CART
-          ========================================================== */}
+          ======================================================== */}
           <div className="xl:col-span-1">
 
-            <div className="sticky top-6 rounded-2xl border border-gray-200 bg-white shadow-sm">
+           <div className="rounded-2xl border border-gray-200 bg-white shadow-sm xl:sticky xl:top-6">
 
               {/* Cart Header */}
               <div className="flex items-center justify-between border-b border-gray-200 p-5">
@@ -927,7 +990,7 @@ export default function Cashier() {
               </div>
 
               {/* Cart Items */}
-              <div className="max-h-[430px] space-y-4 overflow-y-auto p-5">
+              <div className="max-h-[360px] space-y-4 overflow-y-auto p-4 sm:max-h-[430px] sm:p-5">
 
                 {cart.length === 0 ? (
                   <div className="py-12 text-center">
@@ -950,7 +1013,7 @@ export default function Cashier() {
                   cart.map((item, index) => (
                     <div
                       key={`${item.product_id}-${item.unit_id}-${index}`}
-                      className="rounded-xl border border-gray-200 p-4"
+                      className="rounded-xl border border-gray-200 p-3 sm:p-4"
                     >
 
                       <div className="flex items-start justify-between gap-3">
@@ -995,10 +1058,10 @@ export default function Cashier() {
                         </button>
 
                       </div>
+                        <div className="mt-3 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                      
 
-                      <div className="mt-3 flex items-center justify-between gap-3">
-
-                        <div className="flex items-center rounded-lg border border-gray-300">
+                        <div className="flex w-full items-center rounded-lg border border-gray-300 sm:w-auto">
 
                           <button
                             type="button"
@@ -1012,7 +1075,7 @@ export default function Cashier() {
                             }
                             title="Kurangi jumlah"
                             aria-label="Kurangi jumlah"
-                            className="rounded-l-lg px-3 py-1.5 text-gray-600 transition hover:bg-gray-50"
+                            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-l-lg text-gray-600 transition hover:bg-gray-50 sm:h-auto sm:w-auto sm:px-3 sm:py-1.5"
                           >
                             <Minus size={16} />
                           </button>
@@ -1028,7 +1091,7 @@ export default function Cashier() {
                                 e.target.value
                               )
                             }
-                            className="w-16 border-x border-gray-300 py-1.5 text-center text-sm outline-none"
+                            className="min-w-0 flex-1 border-x border-gray-300 py-2 text-center text-sm outline-none sm:w-16 sm:flex-none sm:py-1.5"
                           />
 
                           <button
@@ -1043,7 +1106,7 @@ export default function Cashier() {
                             }
                             title="Tambah jumlah"
                             aria-label="Tambah jumlah"
-                            className="rounded-r-lg px-3 py-1.5 text-gray-600 transition hover:bg-gray-50"
+                            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-r-lg text-gray-600 transition hover:bg-gray-50 sm:h-auto sm:w-auto sm:px-3 sm:py-1.5"
                           >
                             <Plus size={16} />
                           </button>
@@ -1067,7 +1130,7 @@ export default function Cashier() {
               {/* =====================================================
                   PAYMENT SUMMARY
               ====================================================== */}
-              <div className="border-t border-gray-200 p-5">
+              <div className="border-t border-gray-200 p-4 sm:p-5">
 
                 {/* Total */}
                 <div className="flex items-center justify-between">
@@ -1076,7 +1139,7 @@ export default function Cashier() {
                     Total
                   </span>
 
-                  <span className="text-xl font-bold text-gray-900">
+                  <span className="text-lg font-bold text-gray-900 sm:text-xl">
                     {formatRupiah(total)}
                   </span>
 
@@ -1089,7 +1152,7 @@ export default function Cashier() {
                     Metode Pembayaran
                   </label>
 
-                  <div className="grid grid-cols-3 gap-2">
+                  <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
 
                     {/* Cash */}
                     <button
@@ -1164,7 +1227,9 @@ export default function Cashier() {
 
                 </div>
 
-                {/* Cash Payment */}
+                {/* =================================================
+                    CASH PAYMENT
+                ================================================== */}
                 {paymentMethod === 'cash' && (
                   <div className="mt-5">
 
@@ -1193,7 +1258,7 @@ export default function Cashier() {
                           Nominal cepat
                         </p>
 
-                        <div className="grid grid-cols-3 gap-2">
+                        <div className="grid grid-cols-4 gap-2">
 
                           <button
                             type="button"
@@ -1242,39 +1307,106 @@ export default function Cashier() {
                   </div>
                 )}
 
-                {/* Non Cash Info */}
-                {paymentMethod !== 'cash' && (
-                  <div className="mt-5 rounded-xl border border-blue-100 bg-blue-50 p-4">
+                {/* =================================================
+                    QRIS PAYMENT
+                ================================================== */}
+                {paymentMethod === 'qris' && (
+                  <div className="mt-5 rounded-2xl border border-blue-100 bg-blue-50 p-4">
 
-                    <div className="flex items-start gap-3">
+                    <div className="text-center">
 
-                      {paymentMethod ===
-                      'transfer' ? (
-                        <CreditCard
-                          size={20}
-                          className="mt-0.5 shrink-0 text-blue-600"
-                        />
-                      ) : (
+                      <div className="flex items-center justify-center gap-2">
+
                         <QrCode
                           size={20}
-                          className="mt-0.5 shrink-0 text-blue-600"
+                          className="text-blue-600"
                         />
-                      )}
 
-                      <div>
-
-                        <p className="text-sm font-semibold text-blue-700">
-                          Pembayaran{' '}
-                          {paymentMethod ===
-                          'transfer'
-                            ? 'Transfer'
-                            : 'QRIS'}
+                        <p className="text-sm font-bold text-blue-700">
+                          Pembayaran QRIS
                         </p>
 
-                        <p className="mt-1 text-xs leading-5 text-blue-600">
-                          Pembayaran akan dicatat
-                          sebesar total transaksi.
-                          Tidak ada kembalian.
+                      </div>
+
+                      <p className="mt-1 text-xs text-blue-600">
+                        Scan QRIS toko menggunakan aplikasi pembayaran.
+                      </p>
+
+                      {/* QRIS Image */}
+                      <div className="mx-auto mt-4 flex h-56 w-56 items-center justify-center overflow-hidden rounded-2xl border border-gray-200 bg-white p-3 shadow-sm">
+
+                        {!qrisImageError ? (
+                          <img
+                            src={
+                              STORE_PAYMENT_INFO.qrisImage
+                            }
+                            alt="QRIS Toko"
+                            className="h-full w-full object-contain"
+                            onError={() =>
+                              setQrisImageError(
+                                true
+                              )
+                            }
+                          />
+                        ) : (
+                          <div className="flex flex-col items-center justify-center text-center">
+
+                            <QrCode
+                              size={70}
+                              className="text-gray-300"
+                            />
+
+                            <p className="mt-3 text-sm font-semibold text-gray-500">
+                              QRIS belum tersedia
+                            </p>
+
+                            <p className="mt-1 px-4 text-xs leading-5 text-gray-400">
+                              Simpan gambar QRIS toko sebagai
+                              <span className="font-semibold">
+                                {' '}
+                                qris-toko.png
+                              </span>
+                              {' '}di folder
+                              <span className="font-semibold">
+                                {' '}
+                                public
+                              </span>
+                              .
+                            </p>
+
+                          </div>
+                        )}
+
+                      </div>
+
+                      <p className="mt-3 text-sm font-semibold text-gray-700">
+                        {STORE_PAYMENT_INFO.qrisName}
+                      </p>
+
+                      {/* Total */}
+                      <div className="mt-4 rounded-xl border border-blue-200 bg-white p-3">
+
+                        <p className="text-xs text-gray-500">
+                          Total yang harus dibayar
+                        </p>
+
+                        <p className="mt-1 text-xl font-bold text-blue-700">
+                          {formatRupiah(total)}
+                        </p>
+
+                      </div>
+
+                      {/* Pending info */}
+                      <div className="mt-3 rounded-xl border border-yellow-200 bg-yellow-50 p-3 text-left">
+
+                        <p className="text-xs font-semibold text-yellow-700">
+                          Menunggu pembayaran
+                        </p>
+
+                        <p className="mt-1 text-xs leading-5 text-yellow-700">
+                          Setelah pelanggan melakukan pembayaran,
+                          transaksi akan berstatus pending sampai
+                          admin melakukan konfirmasi.
                         </p>
 
                       </div>
@@ -1284,19 +1416,114 @@ export default function Cashier() {
                   </div>
                 )}
 
-                {/* Paid / Payment summary */}
+                {/* =================================================
+                    TRANSFER PAYMENT
+                ================================================== */}
+                {paymentMethod === 'transfer' && (
+                  <div className="mt-5 rounded-2xl border border-blue-100 bg-blue-50 p-4">
+
+                    <div className="flex items-center gap-2">
+
+                      <CreditCard
+                        size={20}
+                        className="text-blue-600"
+                      />
+
+                      <p className="text-sm font-bold text-blue-700">
+                        Pembayaran Transfer
+                      </p>
+
+                    </div>
+
+                    <p className="mt-1 break-words text-xs leading-5 text-blue-600">
+                      Silakan transfer sesuai total transaksi ke rekening toko berikut.
+                    </p>
+
+                    {/* Bank Information */}
+                    <div className="mt-4 space-y-3">
+
+                      <div className="rounded-xl border border-blue-100 bg-white p-4">
+
+                        <p className="text-xs text-gray-500">
+                          Bank
+                        </p>
+
+                        <p className="mt-1 text-base font-bold text-gray-900">
+                          {STORE_PAYMENT_INFO.bankName}
+                        </p>
+
+                      </div>
+
+                      <div className="rounded-xl border border-blue-100 bg-white p-4">
+
+                        <p className="text-xs text-gray-500">
+                          Nomor Rekening
+                        </p>
+
+                        <p className="mt-1 text-lg font-bold tracking-wide text-gray-900">
+                          {STORE_PAYMENT_INFO.accountNumber}
+                        </p>
+
+                      </div>
+
+                      <div className="rounded-xl border border-blue-100 bg-white p-4">
+
+                        <p className="text-xs text-gray-500">
+                          Atas Nama
+                        </p>
+
+                        <p className="mt-1 text-base font-bold text-gray-900">
+                          {STORE_PAYMENT_INFO.accountName}
+                        </p>
+
+                      </div>
+
+                    </div>
+
+                    {/* Total */}
+                    <div className="mt-4 rounded-xl border border-blue-200 bg-white p-3">
+
+                      <p className="text-xs text-gray-500">
+                        Total yang harus ditransfer
+                      </p>
+
+                      <p className="mt-1 text-xl font-bold text-blue-700">
+                        {formatRupiah(total)}
+                      </p>
+
+                    </div>
+
+                    {/* Pending info */}
+                    <div className="mt-3 rounded-xl border border-yellow-200 bg-yellow-50 p-3">
+
+                      <p className="text-xs font-semibold text-yellow-700">
+                        Menunggu konfirmasi
+                      </p>
+
+                      <p className="mt-1 text-xs leading-5 text-yellow-700">
+                        Setelah pelanggan melakukan transfer,
+                        transaksi akan berstatus pending sampai
+                        admin melakukan konfirmasi pembayaran.
+                      </p>
+
+                    </div>
+
+                  </div>
+                )}
+
+                {/* =================================================
+                    PAYMENT SUMMARY
+                ================================================== */}
                 <div className="mt-4 space-y-3">
 
                   <div className="flex items-center justify-between">
 
                     <span className="text-sm text-gray-500">
-                      Dibayar
+                      Total
                     </span>
 
                     <span className="font-semibold text-gray-900">
-                      {formatRupiah(
-                        paidAmount
-                      )}
+                      {formatRupiah(total)}
                     </span>
 
                   </div>
@@ -1304,26 +1531,52 @@ export default function Cashier() {
                   <div className="flex items-center justify-between">
 
                     <span className="text-sm text-gray-500">
-                      Kembalian
+                      {paymentMethod === 'cash'
+                        ? 'Dibayar'
+                        : 'Status Pembayaran'}
                     </span>
 
-                    <span
-                      className={`font-bold ${
-                        change < 0
-                          ? 'text-red-600'
-                          : 'text-green-600'
-                      }`}
-                    >
-                      {formatRupiah(
-                        change
-                      )}
-                    </span>
+                    {paymentMethod === 'cash' ? (
+                      <span className="font-semibold text-gray-900">
+                        {formatRupiah(
+                          paidAmount
+                        )}
+                      </span>
+                    ) : (
+                      <span className="rounded-full bg-yellow-100 px-2.5 py-1 text-xs font-semibold text-yellow-700">
+                        Menunggu Konfirmasi
+                      </span>
+                    )}
 
                   </div>
 
+                  {paymentMethod === 'cash' && (
+                    <div className="flex items-center justify-between">
+
+                      <span className="text-sm text-gray-500">
+                        Kembalian
+                      </span>
+
+                      <span
+                        className={`font-bold ${
+                          change < 0
+                            ? 'text-red-600'
+                            : 'text-green-600'
+                        }`}
+                      >
+                        {formatRupiah(
+                          change
+                        )}
+                      </span>
+
+                    </div>
+                  )}
+
                 </div>
 
-                {/* Process Transaction */}
+                {/* =================================================
+                    PROCESS TRANSACTION
+                ================================================== */}
                 <button
                   type="button"
                   disabled={
@@ -1334,18 +1587,24 @@ export default function Cashier() {
                   title={
                     loadingTransaction
                       ? 'Menyimpan transaksi...'
-                      : 'Simpan transaksi'
+                      : paymentMethod === 'cash'
+                      ? 'Selesaikan transaksi tunai'
+                      : 'Buat transaksi pending'
                   }
                   aria-label={
                     loadingTransaction
                       ? 'Menyimpan transaksi'
-                      : 'Simpan transaksi'
+                      : paymentMethod === 'cash'
+                      ? 'Selesaikan transaksi tunai'
+                      : 'Buat transaksi pending'
                   }
                   className="mt-5 flex w-full items-center justify-center gap-2 rounded-xl bg-blue-600 px-4 py-3 text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-gray-300"
                 >
+
                   {loadingTransaction ? (
                     <>
                       <span className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
+
                       <span className="text-sm font-semibold">
                         Memproses...
                       </span>
@@ -1353,11 +1612,15 @@ export default function Cashier() {
                   ) : (
                     <>
                       <Check size={21} />
+
                       <span className="text-sm font-semibold">
-                        Proses Transaksi
+                        {paymentMethod === 'cash'
+                          ? 'Proses Transaksi'
+                          : 'Buat Transaksi Pending'}
                       </span>
                     </>
                   )}
+
                 </button>
 
               </div>
