@@ -253,27 +253,16 @@ function Sidebar({
           </div>
 
           <div className="relative flex w-full items-center justify-between">
-            <div className="flex items-center gap-3">
-              {/* Logo */}
-              <div className="relative flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-blue-500 via-blue-600 to-blue-700 text-sm font-extrabold tracking-tight text-white shadow-lg shadow-blue-200">
-                BP
-
-                <span className="absolute -bottom-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full border-[2.5px] border-white bg-emerald-500">
-                  <span className="h-1.5 w-1.5 rounded-full bg-white" />
-                </span>
-              </div>
-
-              <div className="min-w-0">
-                <h1 className="text-[17px] font-bold tracking-tight text-slate-900">
-                  BuildPOS
-                </h1>
-
-                <p className="mt-0.5 text-[10px] font-medium uppercase tracking-[0.13em] text-slate-400">
-                  Point of Sale
-                </p>
+            <div className="flex items-center gap-4">
+              {/* Logo Setia Nugraha */}
+              <div className="flex items-center justify-center">
+                <img
+                  src="/logo.png"
+                  alt="Setia Nugraha"
+                  className="h-20 w-auto object-contain"
+                />
               </div>
             </div>
-
             {/* Mobile close */}
             <button
               type="button"

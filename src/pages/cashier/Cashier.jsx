@@ -7,6 +7,7 @@ import {
   Plus,
   QrCode,
   Search,
+  Wallet,
   ShoppingCart,
   Trash2,
   X,
@@ -82,11 +83,11 @@ function getProductSize(product) {
 */
 const STORE_PAYMENT_INFO = {
   qrisImage: '/qris_toko.jpeg',
-  qrisName: 'QRIS Toko Bangunan',
+  qrisName: 'QRIS Toko Setia Nugraha',
 
   bankName: 'BCA',
   accountNumber: '1234567890',
-  accountName: 'TOKO BANGUNAN',
+  accountName: 'TOKO SETIA NUGRAHA',
 }
 
 export default function Cashier() {
@@ -209,8 +210,11 @@ export default function Cashier() {
   |
   */
   const paidAmount =
-    paymentMethod === 'cash'
+    paymentMethod === 'cash' ||
+    paymentMethod === 'partial'
       ? Number(paid) || 0
+      : paymentMethod === 'debit'
+      ? total
       : 0
 
   const change =
@@ -218,12 +222,23 @@ export default function Cashier() {
       ? Math.max(paidAmount - total, 0)
       : 0
 
+  const remainingAmount =
+    paymentMethod === 'partial'
+      ? Math.max(total - paidAmount, 0)
+      : paymentMethod === 'credit' ||
+          paymentMethod === 'bon'
+      ? total
+      : 0
+
   const isPaymentValid =
     cart.length > 0 &&
     total > 0 &&
     (
-      paymentMethod !== 'cash' ||
-      paidAmount >= total
+      paymentMethod === 'cash'
+        ? paidAmount >= total
+        : paymentMethod === 'partial'
+        ? paidAmount > 0 && paidAmount < total
+        : true
     )
 
   const openProductModal = async (product) => {
@@ -533,7 +548,10 @@ export default function Cashier() {
      * QRIS dan Transfer tidak membutuhkan
      * input nominal dari kasir.
      */
-    if (method !== 'cash') {
+    if (
+      method !== 'cash' &&
+      method !== 'partial'
+    ) {
       setPaid('')
     }
   }
@@ -568,13 +586,41 @@ export default function Cashier() {
         )
         return
       }
-    } else {
-      if (total <= 0) {
+    }
+
+    if (
+      (paymentMethod === 'bon' ||
+        paymentMethod === 'partial' ||
+        paymentMethod === 'credit') &&
+      !selectedCustomer
+    ) {
+      setError(
+        'Pilih pelanggan untuk pembayaran Kredit, Kasbon, atau Bayar Sebagian.'
+      )
+      return
+    }
+
+    if (paymentMethod === 'partial') {
+      if (paidAmount <= 0) {
         setError(
-          'Total transaksi harus lebih dari 0.'
+          'Nominal pembayaran harus lebih dari 0.'
         )
         return
       }
+
+      if (paidAmount >= total) {
+        setError(
+          'Untuk Bayar Sebagian, nominal harus kurang dari total transaksi.'
+        )
+        return
+      }
+    }
+
+    if (total <= 0) {
+      setError(
+        'Total transaksi harus lebih dari 0.'
+      )
+      return
     }
 
     try {
@@ -1152,7 +1198,7 @@ export default function Cashier() {
                     Metode Pembayaran
                   </label>
 
-                  <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
+                  <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
 
                     {/* Cash */}
                     <button
@@ -1221,6 +1267,94 @@ export default function Cashier() {
 
                       <span>QRIS</span>
 
+                    </button>
+
+                    {/* Debit */}
+                    <button
+                      type="button"
+                      onClick={() =>
+                        handlePaymentMethodChange(
+                          'debit'
+                        )
+                      }
+                      title="Pembayaran Debit"
+                      aria-label="Pembayaran Debit"
+                      className={`flex flex-col items-center justify-center gap-1.5 rounded-xl border px-2 py-3 text-xs font-semibold transition ${
+                        paymentMethod ===
+                        'debit'
+                          ? 'border-green-500 bg-green-50 text-green-600'
+                          : 'border-gray-200 bg-white text-gray-600 hover:border-gray-300 hover:bg-gray-50'
+                      }`}
+                    >
+                      <CreditCard size={20} />
+
+                      <span>Debit</span>
+                    </button>
+
+                    {/* Credit */}
+                    <button
+                      type="button"
+                      onClick={() =>
+                        handlePaymentMethodChange(
+                          'credit'
+                        )
+                      }
+                      title="Pembayaran Credit"
+                      aria-label="Pembayaran Credit"
+                      className={`flex flex-col items-center justify-center gap-1.5 rounded-xl border px-2 py-3 text-xs font-semibold transition ${
+                        paymentMethod ===
+                        'credit'
+                          ? 'border-orange-500 bg-orange-50 text-orange-600'
+                          : 'border-gray-200 bg-white text-gray-600 hover:border-gray-300 hover:bg-gray-50'
+                      }`}
+                    >
+                      <CreditCard size={20} />
+
+                      <span>Credit</span>
+                    </button>
+
+                    {/* Kasbon */}
+                    <button
+                      type="button"
+                      onClick={() =>
+                        handlePaymentMethodChange(
+                          'bon'
+                        )
+                      }
+                      title="Pembayaran Kasbon"
+                      aria-label="Pembayaran Kasbon"
+                      className={`flex flex-col items-center justify-center gap-1.5 rounded-xl border px-2 py-3 text-xs font-semibold transition ${
+                        paymentMethod ===
+                        'bon'
+                          ? 'border-red-500 bg-red-50 text-red-600'
+                          : 'border-gray-200 bg-white text-gray-600 hover:border-gray-300 hover:bg-gray-50'
+                      }`}
+                    >
+                      <Wallet size={20} />
+
+                      <span>Kasbon</span>
+                    </button>
+
+                    {/* Bayar Sebagian */}
+                    <button
+                      type="button"
+                      onClick={() =>
+                        handlePaymentMethodChange(
+                          'partial'
+                        )
+                      }
+                      title="Bayar Sebagian"
+                      aria-label="Bayar Sebagian"
+                      className={`flex flex-col items-center justify-center gap-1.5 rounded-xl border px-2 py-3 text-xs font-semibold transition ${
+                        paymentMethod ===
+                        'partial'
+                          ? 'border-purple-500 bg-purple-50 text-purple-600'
+                          : 'border-gray-200 bg-white text-gray-600 hover:border-gray-300 hover:bg-gray-50'
+                      }`}
+                    >
+                      <Wallet size={20} />
+
+                      <span>Sebagian</span>
                     </button>
 
                   </div>
@@ -1512,6 +1646,156 @@ export default function Cashier() {
                 )}
 
                 {/* =================================================
+                    DEBIT PAYMENT
+                ================================================== */}
+                {paymentMethod === 'debit' && (
+                  <div className="mt-5 rounded-2xl border border-green-100 bg-green-50 p-4">
+                    <div className="flex items-center gap-2">
+                      <CreditCard
+                        size={20}
+                        className="text-green-600"
+                      />
+
+                      <p className="text-sm font-bold text-green-700">
+                        Pembayaran Debit
+                      </p>
+                    </div>
+
+                    <p className="mt-1 text-xs leading-5 text-green-600">
+                      Transaksi debit dianggap dibayar penuh saat
+                      transaksi diproses.
+                    </p>
+
+                    <div className="mt-4 rounded-xl border border-green-200 bg-white p-3">
+                      <p className="text-xs text-gray-500">
+                        Jumlah dibayar
+                      </p>
+
+                      <p className="mt-1 text-xl font-bold text-green-700">
+                        {formatRupiah(total)}
+                      </p>
+                    </div>
+                  </div>
+                )}
+
+                {/* =================================================
+                    CREDIT PAYMENT
+                ================================================== */}
+                {paymentMethod === 'credit' && (
+                  <div className="mt-5 rounded-2xl border border-orange-100 bg-orange-50 p-4">
+                    <div className="flex items-center gap-2">
+                      <CreditCard
+                        size={20}
+                        className="text-orange-600"
+                      />
+
+                      <p className="text-sm font-bold text-orange-700">
+                        Pembayaran Credit
+                      </p>
+                    </div>
+
+                    <p className="mt-1 text-xs leading-5 text-orange-600">
+                      Transaksi dicatat sebagai belum lunas dan
+                      pembayaran dapat dikonfirmasi kemudian.
+                    </p>
+
+                    <div className="mt-4 rounded-xl border border-orange-200 bg-white p-3">
+                      <p className="text-xs text-gray-500">
+                        Sisa pembayaran
+                      </p>
+
+                      <p className="mt-1 text-xl font-bold text-orange-700">
+                        {formatRupiah(total)}
+                      </p>
+                    </div>
+                  </div>
+                )}
+
+                {/* =================================================
+                    KASBON PAYMENT
+                ================================================== */}
+                {paymentMethod === 'bon' && (
+                  <div className="mt-5 rounded-2xl border border-red-100 bg-red-50 p-4">
+                    <div className="flex items-center gap-2">
+                      <Wallet
+                        size={20}
+                        className="text-red-600"
+                      />
+
+                      <p className="text-sm font-bold text-red-700">
+                        Pembayaran Kasbon
+                      </p>
+                    </div>
+
+                    <p className="mt-1 text-xs leading-5 text-red-600">
+                      Pelanggan wajib dipilih. Transaksi dicatat
+                      sebagai belum lunas.
+                    </p>
+
+                    <div className="mt-4 rounded-xl border border-red-200 bg-white p-3">
+                      <p className="text-xs text-gray-500">
+                        Total kasbon
+                      </p>
+
+                      <p className="mt-1 text-xl font-bold text-red-700">
+                        {formatRupiah(total)}
+                      </p>
+                    </div>
+                  </div>
+                )}
+
+                {/* =================================================
+                    PARTIAL PAYMENT
+                ================================================== */}
+                {paymentMethod === 'partial' && (
+                  <div className="mt-5 rounded-2xl border border-purple-100 bg-purple-50 p-4">
+                    <div className="flex items-center gap-2">
+                      <Wallet
+                        size={20}
+                        className="text-purple-600"
+                      />
+
+                      <p className="text-sm font-bold text-purple-700">
+                        Bayar Sebagian
+                      </p>
+                    </div>
+
+                    <p className="mt-1 text-xs leading-5 text-purple-600">
+                      Pelanggan wajib dipilih dan nominal pembayaran
+                      harus kurang dari total transaksi.
+                    </p>
+
+                    <label className="mt-4 mb-2 block text-sm font-semibold text-gray-700">
+                      Nominal Dibayar
+                    </label>
+
+                    <input
+                      type="number"
+                      min="1"
+                      max={Math.max(total - 1, 0)}
+                      value={paid}
+                      onChange={(e) =>
+                        setPaid(e.target.value)
+                      }
+                      placeholder="Masukkan nominal pembayaran"
+                      className="w-full rounded-xl border border-gray-300 bg-white px-4 py-3 text-sm outline-none focus:border-purple-500 focus:ring-2 focus:ring-purple-100"
+                    />
+
+                    <div className="mt-3 rounded-xl border border-purple-200 bg-white p-3">
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs text-gray-500">
+                          Sisa pembayaran
+                        </span>
+
+                        <span className="font-bold text-purple-700">
+                          {formatRupiah(remainingAmount)}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* =================================================
                     PAYMENT SUMMARY
                 ================================================== */}
                 <div className="mt-4 space-y-3">
@@ -1531,16 +1815,25 @@ export default function Cashier() {
                   <div className="flex items-center justify-between">
 
                     <span className="text-sm text-gray-500">
-                      {paymentMethod === 'cash'
+                      {paymentMethod === 'cash' ||
+                      paymentMethod === 'partial' ||
+                      paymentMethod === 'debit'
                         ? 'Dibayar'
                         : 'Status Pembayaran'}
                     </span>
 
-                    {paymentMethod === 'cash' ? (
+                    {paymentMethod === 'cash' ||
+                    paymentMethod === 'partial' ||
+                    paymentMethod === 'debit' ? (
                       <span className="font-semibold text-gray-900">
                         {formatRupiah(
                           paidAmount
                         )}
+                      </span>
+                    ) : paymentMethod === 'credit' ||
+                      paymentMethod === 'bon' ? (
+                      <span className="rounded-full bg-red-100 px-2.5 py-1 text-xs font-semibold text-red-700">
+                        Belum Lunas
                       </span>
                     ) : (
                       <span className="rounded-full bg-yellow-100 px-2.5 py-1 text-xs font-semibold text-yellow-700">
@@ -1549,6 +1842,24 @@ export default function Cashier() {
                     )}
 
                   </div>
+
+                  {(paymentMethod === 'partial' ||
+                    paymentMethod === 'credit' ||
+                    paymentMethod === 'bon') && (
+                    <div className="flex items-center justify-between">
+
+                      <span className="text-sm text-gray-500">
+                        Sisa Pembayaran
+                      </span>
+
+                      <span className="font-bold text-red-600">
+                        {formatRupiah(
+                          remainingAmount
+                        )}
+                      </span>
+
+                    </div>
+                  )}
 
                   {paymentMethod === 'cash' && (
                     <div className="flex items-center justify-between">
@@ -1589,6 +1900,14 @@ export default function Cashier() {
                       ? 'Menyimpan transaksi...'
                       : paymentMethod === 'cash'
                       ? 'Selesaikan transaksi tunai'
+                      : paymentMethod === 'debit'
+                      ? 'Proses pembayaran debit'
+                      : paymentMethod === 'credit'
+                      ? 'Buat transaksi credit'
+                      : paymentMethod === 'bon'
+                      ? 'Buat transaksi kasbon'
+                      : paymentMethod === 'partial'
+                      ? 'Buat transaksi bayar sebagian'
                       : 'Buat transaksi pending'
                   }
                   aria-label={
@@ -1596,6 +1915,14 @@ export default function Cashier() {
                       ? 'Menyimpan transaksi'
                       : paymentMethod === 'cash'
                       ? 'Selesaikan transaksi tunai'
+                      : paymentMethod === 'debit'
+                      ? 'Proses pembayaran debit'
+                      : paymentMethod === 'credit'
+                      ? 'Buat transaksi credit'
+                      : paymentMethod === 'bon'
+                      ? 'Buat transaksi kasbon'
+                      : paymentMethod === 'partial'
+                      ? 'Buat transaksi bayar sebagian'
                       : 'Buat transaksi pending'
                   }
                   className="mt-5 flex w-full items-center justify-center gap-2 rounded-xl bg-blue-600 px-4 py-3 text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-gray-300"
@@ -1616,6 +1943,14 @@ export default function Cashier() {
                       <span className="text-sm font-semibold">
                         {paymentMethod === 'cash'
                           ? 'Proses Transaksi'
+                          : paymentMethod === 'debit'
+                          ? 'Proses Debit'
+                          : paymentMethod === 'credit'
+                          ? 'Proses Credit'
+                          : paymentMethod === 'bon'
+                          ? 'Proses Kasbon'
+                          : paymentMethod === 'partial'
+                          ? 'Proses Bayar Sebagian'
                           : 'Buat Transaksi Pending'}
                       </span>
                     </>

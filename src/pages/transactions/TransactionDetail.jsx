@@ -649,7 +649,7 @@ export default function TransactionDetail() {
           <div class="center">
 
             <div class="title">
-              BUILDPOS
+              Toko Setia Nugraha
             </div>
 
             <div>
