@@ -155,12 +155,11 @@ export default function StockIn() {
       setSaving(true)
 
       const payload = {
-        product_id: Number(productId),
-        quantity: Number(quantity),
-        note:
-          note.trim() ||
-          'Stok masuk',
-      }
+          product_id: Number(productId),
+          unit_id: Number(selectedProduct.base_unit_id),
+          quantity: Number(quantity),
+          note: note.trim() || 'Stok masuk',
+      }   
 
       console.log(
         'STOCK IN PAYLOAD:',
