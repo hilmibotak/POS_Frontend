@@ -33,11 +33,30 @@ function Sidebar({
   const [produkOpen, setProdukOpen] =
     useState(true)
 
+  const [transaksiOpen, setTransaksiOpen] =
+    useState(true)
+
   const isAdmin =
     user?.role === 'admin'
 
   const isKasir =
     user?.role === 'kasir'
+
+  /*
+  |--------------------------------------------------------------------------
+  | ACTIVE TRANSACTION MENU
+  |--------------------------------------------------------------------------
+  */
+
+  const isTransactionMenuActive =
+    activeMenu === 'transactions' ||
+    activeMenu === 'payment-history'
+
+  /*
+  |--------------------------------------------------------------------------
+  | LOGOUT
+  |--------------------------------------------------------------------------
+  */
 
   const handleLogout = async () => {
     try {
@@ -48,6 +67,12 @@ function Sidebar({
       })
     }
   }
+
+  /*
+  |--------------------------------------------------------------------------
+  | USER
+  |--------------------------------------------------------------------------
+  */
 
   const userInitial =
     user?.name
@@ -61,23 +86,59 @@ function Sidebar({
         ? 'Kasir'
         : 'Pengguna'
 
+  /*
+  |--------------------------------------------------------------------------
+  | MAIN MENU
+  |--------------------------------------------------------------------------
+  */
+
   const mainMenuItems = [
+  {
+    label: 'Dashboard',
+    path: '/dashboard',
+    icon: LayoutDashboard,
+  },
+  {
+    label: 'Kasir',
+    path: '/cashier',
+    icon: ShoppingCart,
+  },
+  {
+    label: 'Pelanggan',
+    path: '/customers',
+    icon: UserRound,
+  },
+]
+
+  /*
+  |--------------------------------------------------------------------------
+  | TRANSACTION SUBMENU
+  |--------------------------------------------------------------------------
+  |
+  | Riwayat Transaksi
+  | ├── Pembayaran Langsung
+  | └── Riwayat Tagihan
+  |
+  */
+
+  const transactionMenuItems = [
     {
-      label: 'Dashboard',
-      path: '/dashboard',
-      icon: LayoutDashboard,
-    },
-    {
-      label: 'Kasir',
-      path: '/cashier',
-      icon: ShoppingCart,
-    },
-    {
-      label: 'Riwayat Transaksi',
+      label: 'Pembayaran Langsung',
       path: '/transactions',
       icon: ClipboardList,
     },
+    {
+      label: 'Riwayat Tagihan',
+      path: '/payment-history',
+      icon: ClipboardList,
+    },
   ]
+
+  /*
+  |--------------------------------------------------------------------------
+  | PRODUCT MENU
+  |--------------------------------------------------------------------------
+  */
 
   const productMenuItems = [
     {
@@ -96,6 +157,12 @@ function Sidebar({
       icon: Boxes,
     },
   ]
+
+  /*
+  |--------------------------------------------------------------------------
+  | ADMIN MENU
+  |--------------------------------------------------------------------------
+  */
 
   const adminMenuItems = [
     {
@@ -120,18 +187,25 @@ function Sidebar({
     },
   ]
 
+  /*
+  |--------------------------------------------------------------------------
+  | KASIR MENU
+  |--------------------------------------------------------------------------
+  */
+
   const kasirMenuItems = [
     {
       label: 'Barang',
       path: '/products',
       icon: Package,
     },
-    {
-      label: 'Pelanggan',
-      path: '/customers',
-      icon: UserRound,
-    },
   ]
+
+  /*
+  |--------------------------------------------------------------------------
+  | MENU CLASS
+  |--------------------------------------------------------------------------
+  */
 
   const getMenuClass = ({
     isActive,
@@ -161,6 +235,12 @@ function Sidebar({
     }
   `
 
+  /*
+  |--------------------------------------------------------------------------
+  | RENDER MENU ITEM
+  |--------------------------------------------------------------------------
+  */
+
   const renderMenuItem = (
     item
   ) => {
@@ -177,16 +257,35 @@ function Sidebar({
         {({ isActive }) => (
           <>
             {/* Active Indicator */}
+
             {isActive && (
-              <span className="absolute -left-3 top-1/2 h-7 w-1 -translate-y-1/2 rounded-r-full bg-blue-500" />
+              <span
+                className="
+                  absolute
+                  -left-3
+                  top-1/2
+                  h-7
+                  w-1
+                  -translate-y-1/2
+                  rounded-r-full
+                  bg-blue-500
+                "
+              />
             )}
+
+            {/* Icon */}
 
             <span
               className={`
-                flex h-9 w-9 shrink-0
-                items-center justify-center
+                flex
+                h-9
+                w-9
+                shrink-0
+                items-center
+                justify-center
                 rounded-lg
-                transition-all duration-200
+                transition-all
+                duration-200
                 ${
                   isActive
                     ? 'bg-white/15'
@@ -197,7 +296,8 @@ function Sidebar({
               <Icon
                 strokeWidth={1.9}
                 className={`
-                  h-[18px] w-[18px]
+                  h-[18px]
+                  w-[18px]
                   ${
                     isActive
                       ? 'text-white'
@@ -206,6 +306,8 @@ function Sidebar({
                 `}
               />
             </span>
+
+            {/* Label */}
 
             <span className="truncate">
               {item.label}
@@ -216,12 +318,28 @@ function Sidebar({
     )
   }
 
+  /*
+  |--------------------------------------------------------------------------
+  | RENDER
+  |--------------------------------------------------------------------------
+  */
+
   return (
     <>
-      {/* Mobile Backdrop */}
+      {/* =========================================================
+          MOBILE BACKDROP
+      ========================================================= */}
+
       {open && (
         <div
-          className="fixed inset-0 z-30 bg-slate-950/40 backdrop-blur-[2px] lg:hidden"
+          className="
+            fixed
+            inset-0
+            z-30
+            bg-slate-950/40
+            backdrop-blur-[2px]
+            lg:hidden
+          "
           onClick={onClose}
           aria-hidden="true"
         />
@@ -229,12 +347,20 @@ function Sidebar({
 
       <aside
         className={`
-          fixed inset-y-0 left-0 z-40
-          flex w-[270px] flex-col
-          border-r border-slate-200
+          fixed
+          inset-y-0
+          left-0
+          z-40
+          flex
+          w-[270px]
+          flex-col
+          border-r
+          border-slate-200
           bg-white
-          shadow-2xl shadow-slate-900/10
-          transition-transform duration-300
+          shadow-2xl
+          shadow-slate-900/10
+          transition-transform
+          duration-300
           ${
             open
               ? 'translate-x-0'
@@ -242,84 +368,504 @@ function Sidebar({
           }
         `}
       >
+
         {/* =========================================================
             BRAND HEADER
         ========================================================= */}
-        <div className="relative flex h-[78px] shrink-0 items-center border-b border-slate-200 px-5">
+
+        <div
+          className="
+            relative
+            flex
+            h-[78px]
+            shrink-0
+            items-center
+            border-b
+            border-slate-200
+            px-5
+          "
+        >
+
           {/* Decorative background */}
-          <div className="pointer-events-none absolute inset-0 overflow-hidden">
-            <div className="absolute -right-8 -top-10 h-28 w-28 rounded-full bg-blue-50" />
-            <div className="absolute -bottom-14 -left-8 h-24 w-24 rounded-full bg-slate-50" />
+
+          <div
+            className="
+              pointer-events-none
+              absolute
+              inset-0
+              overflow-hidden
+            "
+          >
+            <div
+              className="
+                absolute
+                -right-8
+                -top-10
+                h-28
+                w-28
+                rounded-full
+                bg-blue-50
+              "
+            />
+
+            <div
+              className="
+                absolute
+                -bottom-14
+                -left-8
+                h-24
+                w-24
+                rounded-full
+                bg-slate-50
+              "
+            />
           </div>
 
-          <div className="relative flex w-full items-center justify-between">
-            <div className="flex items-center gap-4">
-              {/* Logo Setia Nugraha */}
-              <div className="flex items-center justify-center">
+          <div
+            className="
+              relative
+              flex
+              w-full
+              items-center
+              justify-between
+            "
+          >
+
+            <div
+              className="
+                flex
+                items-center
+                gap-4
+              "
+            >
+
+              {/* Logo */}
+
+              <div
+                className="
+                  flex
+                  items-center
+                  justify-center
+                "
+              >
                 <img
                   src="/logo.png"
                   alt="Setia Nugraha"
-                  className="h-20 w-auto object-contain"
+                  className="
+                    h-20
+                    w-auto
+                    object-contain
+                  "
                 />
               </div>
+
             </div>
+
             {/* Mobile close */}
+
             <button
               type="button"
               title="Tutup sidebar"
               aria-label="Tutup sidebar"
               onClick={onClose}
-              className="flex h-8 w-8 items-center justify-center rounded-lg text-slate-400 transition hover:bg-slate-100 hover:text-slate-700 lg:hidden"
+              className="
+                flex
+                h-8
+                w-8
+                items-center
+                justify-center
+                rounded-lg
+                text-slate-400
+                transition
+                hover:bg-slate-100
+                hover:text-slate-700
+                lg:hidden
+              "
             >
               <X className="h-4 w-4" />
             </button>
+
           </div>
         </div>
 
         {/* =========================================================
             NAVIGATION
         ========================================================= */}
-        <nav className="flex-1 overflow-y-auto px-3 py-5">
-          {/* MENU UTAMA */}
-          <section>
-            <div className="mb-3 flex items-center gap-2 px-3">
-              <span className="h-1 w-1 rounded-full bg-blue-500" />
 
-              <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-slate-400">
+        <nav
+          className="
+            flex-1
+            overflow-y-auto
+            px-3
+            py-5
+          "
+        >
+
+          {/* =====================================================
+              MENU UTAMA
+          ===================================================== */}
+
+          <section>
+
+            <div
+              className="
+                mb-3
+                flex
+                items-center
+                gap-2
+                px-3
+              "
+            >
+              <span
+                className="
+                  h-1
+                  w-1
+                  rounded-full
+                  bg-blue-500
+                "
+              />
+
+              <p
+                className="
+                  text-[10px]
+                  font-bold
+                  uppercase
+                  tracking-[0.16em]
+                  text-slate-400
+                "
+              >
                 Menu Utama
               </p>
             </div>
 
             <div className="space-y-1">
+
+              {/* Dashboard + Kasir */}
+
               {mainMenuItems.map(
                 renderMenuItem
               )}
+
+              {/* =================================================
+                  RIWAYAT TRANSAKSI PARENT
+              ================================================= */}
+
+              <button
+                type="button"
+                title="Riwayat Transaksi"
+                aria-label="Buka menu Riwayat Transaksi"
+                aria-expanded={transaksiOpen}
+                onClick={() =>
+                  setTransaksiOpen(
+                    (previous) =>
+                      !previous
+                  )
+                }
+                className={`
+                  group
+                  flex
+                  w-full
+                  items-center
+                  justify-between
+                  rounded-xl
+                  px-3
+                  py-2.5
+                  text-sm
+                  font-medium
+                  transition-all
+                  duration-200
+                  ${
+                    isTransactionMenuActive
+                      ? 'text-blue-600'
+                      : 'text-slate-600'
+                  }
+                  hover:bg-slate-100
+                  hover:text-slate-900
+                `}
+              >
+
+                <span
+                  className="
+                    flex
+                    items-center
+                    gap-3
+                  "
+                >
+
+                  {/* Icon */}
+
+                  <span
+                    className={`
+                      flex
+                      h-9
+                      w-9
+                      items-center
+                      justify-center
+                      rounded-lg
+                      transition
+                      ${
+                        isTransactionMenuActive
+                          ? 'bg-blue-50'
+                          : 'bg-slate-100 group-hover:bg-white'
+                      }
+                    `}
+                  >
+                    <ClipboardList
+                      strokeWidth={1.9}
+                      className={`
+                        h-[18px]
+                        w-[18px]
+                        ${
+                          isTransactionMenuActive
+                            ? 'text-blue-600'
+                            : 'text-slate-500 group-hover:text-blue-600'
+                        }
+                      `}
+                    />
+                  </span>
+
+                  {/* Label */}
+
+                  <span>
+                    Riwayat Transaksi
+                  </span>
+
+                </span>
+
+                {/* Chevron */}
+
+                <span
+                  className="
+                    flex
+                    h-6
+                    w-6
+                    items-center
+                    justify-center
+                    rounded-md
+                  "
+                >
+                  <ChevronDown
+                    className={`
+                      h-4
+                      w-4
+                      text-slate-400
+                      transition-transform
+                      duration-200
+                      ${
+                        transaksiOpen
+                          ? 'rotate-180'
+                          : ''
+                      }
+                    `}
+                  />
+                </span>
+
+              </button>
+
+              {/* =================================================
+                  RIWAYAT TRANSAKSI SUBMENU
+              ================================================= */}
+
+              <div
+                className={`
+                  grid
+                  transition-all
+                  duration-200
+                  ${
+                    transaksiOpen
+                      ? 'grid-rows-[1fr] opacity-100'
+                      : 'grid-rows-[0fr] opacity-0'
+                  }
+                `}
+              >
+
+                <div
+                  className="
+                    overflow-hidden
+                  "
+                >
+
+                  <div
+                    className="
+                      relative
+                      ml-[29px]
+                      mt-1
+                      border-l
+                      border-slate-200
+                      pl-3
+                    "
+                  >
+
+                    {/* Connector */}
+
+                    <span
+                      className="
+                        absolute
+                        -left-px
+                        top-0
+                        h-5
+                        w-px
+                        bg-blue-200
+                      "
+                    />
+
+                    <div className="space-y-1">
+
+                      {transactionMenuItems.map(
+                        (item) => {
+                          const Icon =
+                            item.icon
+
+                          return (
+                            <NavLink
+                              key={
+                                item.label
+                              }
+                              to={
+                                item.path
+                              }
+                              title={
+                                item.label
+                              }
+                              onClick={
+                                onClose
+                              }
+                              className={
+                                getSubMenuClass
+                              }
+                            >
+                              {({
+                                isActive,
+                              }) => (
+                                <>
+
+                                  {/* Icon */}
+
+                                  <span
+                                    className={`
+                                      flex
+                                      h-7
+                                      w-7
+                                      items-center
+                                      justify-center
+                                      rounded-md
+                                      ${
+                                        isActive
+                                          ? 'bg-blue-100'
+                                          : 'bg-transparent'
+                                      }
+                                    `}
+                                  >
+                                    <Icon
+                                      strokeWidth={
+                                        1.8
+                                      }
+                                      className={`
+                                        h-4
+                                        w-4
+                                        ${
+                                          isActive
+                                            ? 'text-blue-600'
+                                            : 'text-slate-400 group-hover:text-blue-600'
+                                        }
+                                      `}
+                                    />
+                                  </span>
+
+                                  {/* Label */}
+
+                                  <span>
+                                    {
+                                      item.label
+                                    }
+                                  </span>
+
+                                  {/* Active Dot */}
+
+                                  {isActive && (
+                                    <span
+                                      className="
+                                        ml-auto
+                                        h-1.5
+                                        w-1.5
+                                        rounded-full
+                                        bg-blue-600
+                                      "
+                                    />
+                                  )}
+
+                                </>
+                              )}
+                            </NavLink>
+                          )
+                        }
+                      )}
+
+                    </div>
+
+                  </div>
+
+                </div>
+
+              </div>
+
             </div>
+
           </section>
 
           {/* =====================================================
               ADMIN
           ===================================================== */}
+
           {isAdmin && (
             <>
-              {/* MASTER DATA */}
-              <section className="mt-7">
-                <div className="mb-3 flex items-center gap-2 px-3">
-                  <span className="h-1 w-1 rounded-full bg-blue-500" />
 
-                  <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-slate-400">
+              {/* =================================================
+                  MASTER DATA
+              ================================================= */}
+
+              <section className="mt-7">
+
+                <div
+                  className="
+                    mb-3
+                    flex
+                    items-center
+                    gap-2
+                    px-3
+                  "
+                >
+                  <span
+                    className="
+                      h-1
+                      w-1
+                      rounded-full
+                      bg-blue-500
+                    "
+                  />
+
+                  <p
+                    className="
+                      text-[10px]
+                      font-bold
+                      uppercase
+                      tracking-[0.16em]
+                      text-slate-400
+                    "
+                  >
                     Master Data
                   </p>
                 </div>
 
-                {/* Produk Parent */}
+                {/* =================================================
+                    PRODUK PARENT
+                ================================================= */}
+
                 <button
                   type="button"
                   title="Produk"
                   aria-label="Buka menu Produk"
-                  aria-expanded={
-                    produkOpen
-                  }
+                  aria-expanded={produkOpen}
                   onClick={() =>
                     setProdukOpen(
                       (previous) =>
@@ -327,11 +873,18 @@ function Sidebar({
                     )
                   }
                   className={`
-                    group flex w-full
-                    items-center justify-between
-                    rounded-xl px-3 py-2.5
-                    text-sm font-medium
-                    transition-all duration-200
+                    group
+                    flex
+                    w-full
+                    items-center
+                    justify-between
+                    rounded-xl
+                    px-3
+                    py-2.5
+                    text-sm
+                    font-medium
+                    transition-all
+                    duration-200
                     ${
                       activeMenu ===
                       'products'
@@ -342,11 +895,22 @@ function Sidebar({
                     hover:text-slate-900
                   `}
                 >
-                  <span className="flex items-center gap-3">
+
+                  <span
+                    className="
+                      flex
+                      items-center
+                      gap-3
+                    "
+                  >
+
                     <span
                       className={`
-                        flex h-9 w-9
-                        items-center justify-center
+                        flex
+                        h-9
+                        w-9
+                        items-center
+                        justify-center
                         rounded-lg
                         transition
                         ${
@@ -360,7 +924,8 @@ function Sidebar({
                       <Package
                         strokeWidth={1.9}
                         className={`
-                          h-[18px] w-[18px]
+                          h-[18px]
+                          w-[18px]
                           ${
                             activeMenu ===
                             'products'
@@ -371,15 +936,29 @@ function Sidebar({
                       />
                     </span>
 
-                    <span>Produk</span>
+                    <span>
+                      Produk
+                    </span>
+
                   </span>
 
-                  <span className="flex h-6 w-6 items-center justify-center rounded-md">
+                  <span
+                    className="
+                      flex
+                      h-6
+                      w-6
+                      items-center
+                      justify-center
+                      rounded-md
+                    "
+                  >
                     <ChevronDown
                       className={`
-                        h-4 w-4
+                        h-4
+                        w-4
                         text-slate-400
-                        transition-transform duration-200
+                        transition-transform
+                        duration-200
                         ${
                           produkOpen
                             ? 'rotate-180'
@@ -388,12 +967,18 @@ function Sidebar({
                       `}
                     />
                   </span>
+
                 </button>
 
-                {/* Produk Submenu */}
+                {/* =================================================
+                    PRODUK SUBMENU
+                ================================================= */}
+
                 <div
                   className={`
-                    grid transition-all duration-200
+                    grid
+                    transition-all
+                    duration-200
                     ${
                       produkOpen
                         ? 'grid-rows-[1fr] opacity-100'
@@ -401,12 +986,39 @@ function Sidebar({
                     }
                   `}
                 >
-                  <div className="overflow-hidden">
-                    <div className="relative ml-[29px] mt-1 border-l border-slate-200 pl-3">
+
+                  <div
+                    className="
+                      overflow-hidden
+                    "
+                  >
+
+                    <div
+                      className="
+                        relative
+                        ml-[29px]
+                        mt-1
+                        border-l
+                        border-slate-200
+                        pl-3
+                      "
+                    >
+
                       {/* Connector */}
-                      <span className="absolute -left-px top-0 h-5 w-px bg-blue-200" />
+
+                      <span
+                        className="
+                          absolute
+                          -left-px
+                          top-0
+                          h-5
+                          w-px
+                          bg-blue-200
+                        "
+                      />
 
                       <div className="space-y-1">
+
                         {productMenuItems.map(
                           (item) => {
                             const Icon =
@@ -434,9 +1046,12 @@ function Sidebar({
                                   isActive,
                                 }) => (
                                   <>
+
                                     <span
                                       className={`
-                                        flex h-7 w-7
+                                        flex
+                                        h-7
+                                        w-7
                                         items-center
                                         justify-center
                                         rounded-md
@@ -452,7 +1067,8 @@ function Sidebar({
                                           1.8
                                         }
                                         className={`
-                                          h-4 w-4
+                                          h-4
+                                          w-4
                                           ${
                                             isActive
                                               ? 'text-blue-600'
@@ -469,68 +1085,166 @@ function Sidebar({
                                     </span>
 
                                     {isActive && (
-                                      <span className="ml-auto h-1.5 w-1.5 rounded-full bg-blue-600" />
+                                      <span
+                                        className="
+                                          ml-auto
+                                          h-1.5
+                                          w-1.5
+                                          rounded-full
+                                          bg-blue-600
+                                        "
+                                      />
                                     )}
+
                                   </>
                                 )}
                               </NavLink>
                             )
                           }
                         )}
+
                       </div>
+
                     </div>
+
                   </div>
+
                 </div>
+
               </section>
 
-              {/* OPERASIONAL */}
-              <section className="mt-7">
-                <div className="mb-3 flex items-center gap-2 px-3">
-                  <span className="h-1 w-1 rounded-full bg-blue-500" />
+              {/* =================================================
+                  OPERASIONAL
+              ================================================= */}
 
-                  <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-slate-400">
+              <section className="mt-7">
+
+                <div
+                  className="
+                    mb-3
+                    flex
+                    items-center
+                    gap-2
+                    px-3
+                  "
+                >
+                  <span
+                    className="
+                      h-1
+                      w-1
+                      rounded-full
+                      bg-blue-500
+                    "
+                  />
+
+                  <p
+                    className="
+                      text-[10px]
+                      font-bold
+                      uppercase
+                      tracking-[0.16em]
+                      text-slate-400
+                    "
+                  >
                     Operasional
                   </p>
                 </div>
 
                 <div className="space-y-1">
+
                   {adminMenuItems.map(
                     renderMenuItem
                   )}
+
                 </div>
+
               </section>
+
             </>
           )}
 
           {/* =====================================================
               KASIR
           ===================================================== */}
+
           {isKasir && (
             <section className="mt-7">
-              <div className="mb-3 flex items-center gap-2 px-3">
-                <span className="h-1 w-1 rounded-full bg-blue-500" />
 
-                <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-slate-400">
+              <div
+                className="
+                  mb-3
+                  flex
+                  items-center
+                  gap-2
+                  px-3
+                "
+              >
+                <span
+                  className="
+                    h-1
+                    w-1
+                    rounded-full
+                    bg-blue-500
+                  "
+                />
+
+                <p
+                  className="
+                    text-[10px]
+                    font-bold
+                    uppercase
+                    tracking-[0.16em]
+                    text-slate-400
+                  "
+                >
                   Data
                 </p>
               </div>
 
               <div className="space-y-1">
+
                 {kasirMenuItems.map(
                   renderMenuItem
                 )}
+
               </div>
+
             </section>
           )}
 
           {/* =====================================================
               AKUN
           ===================================================== */}
-          <section className="mt-7">
-            <div className="mb-3 flex items-center gap-2 px-3">
-              <span className="h-1 w-1 rounded-full bg-blue-500" />
 
-              <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-slate-400">
+          <section className="mt-7">
+
+            <div
+              className="
+                mb-3
+                flex
+                items-center
+                gap-2
+                px-3
+              "
+            >
+              <span
+                className="
+                  h-1
+                  w-1
+                  rounded-full
+                  bg-blue-500
+                "
+              />
+
+              <p
+                className="
+                  text-[10px]
+                  font-bold
+                  uppercase
+                  tracking-[0.16em]
+                  text-slate-400
+                "
+              >
                 Akun
               </p>
             </div>
@@ -543,15 +1257,30 @@ function Sidebar({
             >
               {({ isActive }) => (
                 <>
+
                   {isActive && (
-                    <span className="absolute -left-3 top-1/2 h-7 w-1 -translate-y-1/2 rounded-r-full bg-blue-500" />
+                    <span
+                      className="
+                        absolute
+                        -left-3
+                        top-1/2
+                        h-7
+                        w-1
+                        -translate-y-1/2
+                        rounded-r-full
+                        bg-blue-500
+                      "
+                    />
                   )}
 
                   <span
                     className={`
-                      flex h-9 w-9
+                      flex
+                      h-9
+                      w-9
                       shrink-0
-                      items-center justify-center
+                      items-center
+                      justify-center
                       rounded-lg
                       ${
                         isActive
@@ -563,7 +1292,8 @@ function Sidebar({
                     <CircleUserRound
                       strokeWidth={1.9}
                       className={`
-                        h-[18px] w-[18px]
+                        h-[18px]
+                        w-[18px]
                         ${
                           isActive
                             ? 'text-white'
@@ -573,74 +1303,215 @@ function Sidebar({
                     />
                   </span>
 
-                  <span>Profil</span>
+                  <span>
+                    Profil
+                  </span>
+
                 </>
               )}
             </NavLink>
+
           </section>
+
         </nav>
 
         {/* =========================================================
             USER FOOTER
         ========================================================= */}
-        <div className="shrink-0 border-t border-slate-200 bg-slate-50/80 p-3">
-          <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+
+        <div
+          className="
+            shrink-0
+            border-t
+            border-slate-200
+            bg-slate-50/80
+            p-3
+          "
+        >
+
+          <div
+            className="
+              overflow-hidden
+              rounded-2xl
+              border
+              border-slate-200
+              bg-white
+              shadow-sm
+            "
+          >
+
             {/* User */}
+
             <div className="p-3">
-              <div className="flex items-center gap-3">
+
+              <div
+                className="
+                  flex
+                  items-center
+                  gap-3
+                "
+              >
+
                 {/* Avatar */}
-                <div className="relative flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-blue-500 to-blue-700 text-sm font-bold text-white shadow-sm shadow-blue-200">
+
+                <div
+                  className="
+                    relative
+                    flex
+                    h-10
+                    w-10
+                    shrink-0
+                    items-center
+                    justify-center
+                    rounded-xl
+                    bg-gradient-to-br
+                    from-blue-500
+                    to-blue-700
+                    text-sm
+                    font-bold
+                    text-white
+                    shadow-sm
+                    shadow-blue-200
+                  "
+                >
                   {userInitial}
 
-                  <span className="absolute -bottom-0.5 -right-0.5 h-3 w-3 rounded-full border-2 border-white bg-emerald-500" />
+                  <span
+                    className="
+                      absolute
+                      -bottom-0.5
+                      -right-0.5
+                      h-3
+                      w-3
+                      rounded-full
+                      border-2
+                      border-white
+                      bg-emerald-500
+                    "
+                  />
                 </div>
 
-                <div className="min-w-0 flex-1">
-                  <p className="truncate text-sm font-semibold text-slate-900">
+                <div
+                  className="
+                    min-w-0
+                    flex-1
+                  "
+                >
+
+                  <p
+                    className="
+                      truncate
+                      text-sm
+                      font-semibold
+                      text-slate-900
+                    "
+                  >
                     {user?.name ||
                       'Pengguna'}
                   </p>
 
-                  <div className="mt-0.5 flex items-center gap-1.5">
-                    <span className="text-[11px] text-slate-400">
+                  <div
+                    className="
+                      mt-0.5
+                      flex
+                      items-center
+                      gap-1.5
+                    "
+                  >
+                    <span
+                      className="
+                        text-[11px]
+                        text-slate-400
+                      "
+                    >
                       {roleLabel}
                     </span>
                   </div>
+
                 </div>
 
                 {/* Status */}
+
                 <span
                   title="Status aktif"
-                  className="flex h-6 w-6 items-center justify-center rounded-full bg-emerald-50"
+                  className="
+                    flex
+                    h-6
+                    w-6
+                    items-center
+                    justify-center
+                    rounded-full
+                    bg-emerald-50
+                  "
                 >
-                  <span className="h-2 w-2 rounded-full bg-emerald-500" />
+                  <span
+                    className="
+                      h-2
+                      w-2
+                      rounded-full
+                      bg-emerald-500
+                    "
+                  />
                 </span>
+
               </div>
+
             </div>
 
             {/* Logout */}
-            <div className="border-t border-slate-100 p-2">
+
+            <div
+              className="
+                border-t
+                border-slate-100
+                p-2
+              "
+            >
+
               <button
                 type="button"
                 title="Keluar"
                 aria-label="Keluar dari akun"
-                onClick={
-                  handleLogout
-                }
-                className="flex w-full items-center justify-center gap-2 rounded-xl px-3 py-2.5 text-sm font-medium text-slate-500 transition-all duration-200 hover:bg-red-50 hover:text-red-600"
+                onClick={handleLogout}
+                className="
+                  flex
+                  w-full
+                  items-center
+                  justify-center
+                  gap-2
+                  rounded-xl
+                  px-3
+                  py-2.5
+                  text-sm
+                  font-medium
+                  text-slate-500
+                  transition-all
+                  duration-200
+                  hover:bg-red-50
+                  hover:text-red-600
+                "
               >
+
                 <LogOut
                   strokeWidth={1.9}
-                  className="h-4 w-4"
+                  className="
+                    h-4
+                    w-4
+                  "
                 />
 
                 <span>
                   Keluar
                 </span>
+
               </button>
+
             </div>
+
           </div>
+
         </div>
+
       </aside>
     </>
   )

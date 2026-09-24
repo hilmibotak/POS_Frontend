@@ -13,14 +13,18 @@ import Products from './pages/products/Products'
 import ProductUnits from './pages/products/ProductUnits'
 import Customers from './pages/customers/Customers'
 import Cashier from './pages/cashier/Cashier'
+
 import Transactions from './pages/transactions/Transactions'
 import TransactionDetail from './pages/transactions/TransactionDetail'
+
 import Stock from './pages/stock/Stock'
 import StockIn from './pages/stock/StockIn'
 import Employees from './pages/employees/Employees'
 import Reports from './pages/reports/Reports'
 import Profile from './pages/profile/Profile'
 
+import PaymentHistory from './pages/payment-history/PaymentHistory'
+import PaymentHistoryDetail from './pages/payment-history/PaymentHistoryDetail'
 
 import {
   AuthProvider,
@@ -83,6 +87,7 @@ function App() {
             }
           />
 
+
           {/* =========================
               PROFILE
               ADMIN + KASIR
@@ -101,8 +106,13 @@ function App() {
 
 
           {/* =========================
-              TRANSACTIONS
-              ADMIN + KASIR
+              PEMBAYARAN LANGSUNG
+              
+              Metode:
+              - Cash
+              - Debit
+              - QRIS
+              - Transfer
           ========================= */}
 
           <Route
@@ -116,6 +126,8 @@ function App() {
             }
           />
 
+          {/* Detail Pembayaran Langsung */}
+
           <Route
             path="/transactions/:id"
             element={
@@ -123,6 +135,40 @@ function App() {
                 roles={['admin', 'kasir']}
               >
                 <TransactionDetail />
+              </RoleRoute>
+            }
+          />
+
+
+          {/* =========================
+              RIWAYAT TAGIHAN
+              
+              Metode:
+              - Bon / Kasbon
+              - Credit
+              - Partial
+          ========================= */}
+
+          <Route
+            path="/payment-history"
+            element={
+              <RoleRoute
+                roles={['admin', 'kasir']}
+              >
+                <PaymentHistory />
+              </RoleRoute>
+            }
+          />
+
+          {/* Detail Riwayat Tagihan */}
+
+          <Route
+            path="/payment-history/:id"
+            element={
+              <RoleRoute
+                roles={['admin', 'kasir']}
+              >
+                <PaymentHistoryDetail />
               </RoleRoute>
             }
           />
@@ -170,7 +216,9 @@ function App() {
           <Route
             path="/categories"
             element={
-              <RoleRoute roles={['admin']}>
+              <RoleRoute
+                roles={['admin']}
+              >
                 <Categories />
               </RoleRoute>
             }
@@ -185,7 +233,9 @@ function App() {
           <Route
             path="/units"
             element={
-              <RoleRoute roles={['admin']}>
+              <RoleRoute
+                roles={['admin']}
+              >
                 <Units />
               </RoleRoute>
             }
@@ -200,7 +250,9 @@ function App() {
           <Route
             path="/products/:productId/units"
             element={
-              <RoleRoute roles={['admin']}>
+              <RoleRoute
+                roles={['admin']}
+              >
                 <ProductUnits />
               </RoleRoute>
             }
@@ -215,7 +267,9 @@ function App() {
           <Route
             path="/stock"
             element={
-              <RoleRoute roles={['admin']}>
+              <RoleRoute
+                roles={['admin']}
+              >
                 <Stock />
               </RoleRoute>
             }
@@ -224,38 +278,49 @@ function App() {
           <Route
             path="/stock/in"
             element={
-              <RoleRoute roles={['admin']}>
+              <RoleRoute
+                roles={['admin']}
+              >
                 <StockIn />
               </RoleRoute>
             }
           />
 
-           {/* =========================
+
+          {/* =========================
               ADMIN ONLY
               EMPLOYEES
           ========================= */}
+
           <Route
             path="/employees"
             element={
-              <RoleRoute roles={['admin']}>
+              <RoleRoute
+                roles={['admin']}
+              >
                 <Employees />
               </RoleRoute>
             }
           />
 
+
           {/* =========================
               ADMIN ONLY
               REPORTS
           ========================= */}
+
           <Route
             path="/reports"
             element={
-              <RoleRoute roles={['admin']}>
+              <RoleRoute
+                roles={['admin']}
+              >
                 <Reports />
               </RoleRoute>
             }
           />
-          
+
+
           {/* =========================
               DEFAULT
           ========================= */}
